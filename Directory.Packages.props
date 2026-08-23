@@ -47,7 +47,7 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
     <!-- Motely.AppHost — pinned to the Aspire.AppHost.Sdk version (13.5.0) in Motely.AppHost.csproj. -->
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.0" />
     <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.5.0" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.0" />
   </ItemGroup>
 </Project>

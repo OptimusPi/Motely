@@ -92,3 +92,9 @@ nuget.config.local
 # local A/B bench outputs
 scripts/token_ab/results/
 .playwright-mcp/
+
+# Seed lake catalog (DuckLake, SQLite) — lives beside Seeds/
+/ducklake.sqlite
+/ducklake.sqlite-journal
+/ducklake.sqlite-wal
+/ducklake.sqlite-shm

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Motely;
+using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Jaml;
 
@@ -91,12 +92,24 @@ public sealed class PoolWorkerHostedService : BackgroundService
                     .WithEndBatchIndex(endBatchExclusive)
                     .WithSequentialSearch();
 
+                // ── Local seed lake ──────────────────────────────────────
+                // Every find streams into the shared lake under the pool's filter id as it is
+                // found — on disk whether or not the submit below ever succeeds.
+                using var lake = localDbDir is null ? null
+                    : new SeedLakeSink(localDbDir, claim.FilterId, plan.ScoreTallyColumnCount > 0 ? plan.TallyLabels : null);
+
                 if (plan.ScoreTallyColumnCount > 0)
                     settings = settings.WithScoredResultCallback(tally =>
-                        matchResults.Add(new SeedResultDto { Seed = tally.Seed, Score = tally.Score }));
+                    {
+                        lake?.OnScored(in tally);
+                        matchResults.Add(new SeedResultDto { Seed = tally.Seed, Score = tally.Score });
+                    });
                 else
                     settings = settings.WithSeedMatchCallback(seed =>
-                        matchResults.Add(new SeedResultDto { Seed = seed }));
+                    {
+                        lake?.OnSeed(seed);
+                        matchResults.Add(new SeedResultDto { Seed = seed });
+                    });
 
                 try
                 {
@@ -110,8 +123,6 @@ public sealed class PoolWorkerHostedService : BackgroundService
                 totalMatches += matchResults.Count;
 
                 var results = matchResults.ToArray();
-
-                // ── Save to local DuckLake ───────────────────────────────
 
                 // ── Submit to pool ───────────────────────────────────────
                 var submitBody = new SubmitResultsDto

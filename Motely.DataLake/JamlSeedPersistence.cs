@@ -49,16 +49,18 @@ public sealed class JamlSeedPersistence : System.IDisposable
     /// Max seeds saved back into the JAML <c>seeds:</c> block for scored filters. Defaults to
     /// unbounded (<see cref="int.MaxValue"/>), matching the CLI.
     /// </param>
+    /// <param name="tallyLabels">The filter's tally column names, recorded in the lake so its rows stay readable.</param>
     public JamlSeedPersistence(
         string? lakeRoot,
         string filterId,
         bool hasStructuredScores,
         MotelyScoreCutoff? cutoff = null,
-        int saveLimit = int.MaxValue
+        int saveLimit = int.MaxValue,
+        IReadOnlyList<string>? tallyLabels = null
     )
     {
         _cutoff = cutoff ?? MotelyScoreCutoff.Off();
-        _lake = new SeedLakeSink(lakeRoot, filterId);
+        _lake = new SeedLakeSink(lakeRoot, filterId, tallyLabels);
 
         if (hasStructuredScores)
         {

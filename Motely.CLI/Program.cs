@@ -725,7 +725,7 @@ partial class Program
                 // persisted nothing, anywhere.
                 var persistSinks = new List<IMotelyResultSink>
                 {
-                    new SeedLakeSink(lakeRoot, config.Id),
+                    new SeedLakeSink(lakeRoot, config.Id, hasStructuredScores ? plan.TallyLabels : null),
                 };
                 if (hasStructuredScores)
                 {

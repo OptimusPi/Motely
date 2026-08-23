@@ -22,14 +22,16 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
     /// is data. JSON and JAML sources always shape-test — they mix seeds with structure.
     /// </summary>
     public SeedSourceProvider(string path, bool distinct = false)
-        : this(path, distinct, extraSeeds: null) { }
+        : this(path, distinct, extraSeeds: null, filterId: null) { }
 
     /// <summary>
     /// <paramref name="extraSeeds"/> pours an in-memory seed list into the --drown haystack
     /// alongside the lake — the JAML's own <c>seeds:</c> block, which is saved output too.
     /// With extras, the lake directory need not exist yet (a fresh filter's first drown).
+    /// <paramref name="filterId"/> narrows the haystack to one filter's finds: its rows in the
+    /// lake catalog plus its legacy per-filter file, whichever exist.
     /// </summary>
-    private SeedSourceProvider(string path, bool distinct, IReadOnlyList<string>? extraSeeds)
+    private SeedSourceProvider(string path, bool distinct, IReadOnlyList<string>? extraSeeds, string? filterId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         path = path.Replace('\\', '/');
@@ -46,13 +48,23 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
 
         bool hasExtras = extraSeeds is { Count: > 0 };
         bool wholeLake = false;
-        if (Directory.Exists(path))
+        if (filterId is not null)
+        {
+            // One filter's finds: the lake's rows for it, and its legacy file if one is still around.
+            EnsureLakeTable();
+            PourLake(path, filterId);
+            var legacy = SeedLakeSink.LakePath(path, filterId).Replace('\\', '/');
+            if (File.Exists(legacy))
+                ImportDatabaseSeeds(legacy);
+            wholeLake = true;
+        }
+        else if (Directory.Exists(path))
         {
             if (distinct)
             {
-                // --drown: the directory *is* the lake. Every .duckdb lake file plus every
-                // CSV/TXT in it pours into one in-memory table; the file locks are released
-                // before the search starts.
+                // --drown: the directory *is* the lake. The catalog's rows, every legacy .duckdb
+                // file and every CSV/TXT in it pour into one in-memory table; the locks are
+                // released before the search starts.
                 ImportLakeRoot(path);
                 wholeLake = true;
             }
@@ -62,11 +74,12 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
                 path = path.TrimEnd('/') + "/*.csv";
             }
         }
-        else if (distinct && hasExtras)
+        else if (distinct && (hasExtras || SeedLake.Exists(path)))
         {
-            // No lake on disk yet, but the caller brought saved seeds of its own: the
-            // haystack is just those. The lake table must exist for the FROM clause below.
+            // No data directory on disk yet, but the caller brought saved seeds of its own (or the
+            // catalog already exists beside where the directory will be): the haystack is those.
             EnsureLakeTable();
+            PourLake(path, null);
             wholeLake = true;
         }
 
@@ -151,8 +164,12 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
         _reader = cmd.ExecuteReader();
     }
 
-    /// <summary>One filter's lake file, deduped and shape-tested.</summary>
+    /// <summary>One legacy per-filter lake file, deduped and shape-tested.</summary>
     public static SeedSourceProvider FromLake(string lakeFile) => new(lakeFile, distinct: true);
+
+    /// <summary>One filter's finds — its rows in the lake plus its legacy file, deduped.</summary>
+    public static SeedSourceProvider FromLakeFilter(string? lakeRoot, string filterId) =>
+        new(SeedLakeSink.LakeRoot(lakeRoot), distinct: true, extraSeeds: null, filterId);
 
     /// <summary>--drown: every seed ever saved under the lake root, across every filter, plus
     /// any <paramref name="extraSeeds"/> the caller already holds (the JAML's seeds: block).
@@ -160,7 +177,7 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
     public static SeedSourceProvider FromLakeRoot(
         string lakeRoot,
         IReadOnlyList<string>? extraSeeds = null
-    ) => new(lakeRoot, distinct: true, extraSeeds);
+    ) => new(lakeRoot, distinct: true, extraSeeds, filterId: null);
 
     /// <summary>File extensions <see cref="FromLakeRoot"/> pours from the lake root.</summary>
     private static readonly string[] LakeFileExtensions =
@@ -176,13 +193,14 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
     private static bool IsLakeFile(string file) =>
         Array.IndexOf(LakeFileExtensions, Path.GetExtension(file).ToLowerInvariant()) >= 0;
 
-    /// <summary>Cheap pre-check: does the lake root hold any non-empty file --drown would pour?
-    /// Mirrors the scan in <see cref="FromLakeRoot"/> without opening DuckDB.</summary>
+    /// <summary>Cheap pre-check: is there a lake catalog, or any non-empty file in the root that
+    /// --drown would pour? Mirrors the scan in <see cref="FromLakeRoot"/> without opening DuckDB.</summary>
     public static bool HasLakeFiles(string lakeRoot) =>
-        Directory.Exists(lakeRoot)
-        && Directory
-            .EnumerateFiles(lakeRoot)
-            .Any(f => IsLakeFile(f) && new FileInfo(f).Length > 0);
+        SeedLake.Exists(lakeRoot)
+        || (Directory.Exists(lakeRoot)
+            && Directory
+                .EnumerateFiles(lakeRoot)
+                .Any(f => IsLakeFile(f) && new FileInfo(f).Length > 0));
 
     public string NextSeed()
     {
@@ -244,9 +262,11 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
     private void ImportLakeRoot(string root)
     {
         EnsureLakeTable();
+        PourLake(root, null);
         var files = Directory
             .EnumerateFiles(root)
-            .Where(IsLakeFile)
+            .Where(f => IsLakeFile(f)
+                && !Path.GetFileName(f).Equals(SeedLake.CatalogFileName, StringComparison.OrdinalIgnoreCase))
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in files)
@@ -264,6 +284,24 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
             {
                 ImportDatabaseSeeds(normalized);
             }
+        }
+    }
+
+    /// <summary>Pour the lake catalog's distinct seeds (one filter's, or all) into <see cref="LakeTable"/>.
+    /// No catalog yet is normal (nothing to pour). A catalog that exists but will not attach is
+    /// reported once and skipped — the files in the root still pour, and the run still happens.</summary>
+    private void PourLake(string root, string? filterId)
+    {
+        try
+        {
+            SeedLake.TryPourInto(_connection, LakeTable, root, filterId);
+        }
+        catch (Exception ex)
+        {
+            var reason = ex.Message;
+            int nl = reason.IndexOf('\n');
+            if (nl >= 0) reason = reason[..nl];
+            Console.Error.WriteLine($"[SeedLake] could not read the lake catalog at {SeedLake.CatalogPathFor(root)} ({reason}); pouring the files in the root only.");
         }
     }
 
