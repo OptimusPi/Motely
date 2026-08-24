@@ -38,7 +38,7 @@ public sealed class PokerHandFilterTests
         Assert.True(JamlConfigLoader.TryLoad(FourOfAKind, out var config, out var error), error);
         Assert.NotNull(config);
         var clause = Assert.IsType<PokerHandClause>(config.Must[0]);
-        Assert.Equal([MotelyPokerHand.FourOfAKind], clause.Hands);
+        Assert.Equal([MotelyPokerHand.FourOfAKind], clause.PokerHands);
         Assert.Equal([1], clause.Antes);
     }
 

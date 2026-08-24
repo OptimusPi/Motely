@@ -303,11 +303,14 @@ public static class MotelyPokerHandEval
     }
 
     /// <summary>
-    /// Balatro deck shuffle stream for starting hand of ante/round <paramref name="round"/>.
+    /// Balatro deck shuffle stream for the starting hand of <paramref name="ante"/>.
+    /// The game keys this stream on the ante, not the round: <c>G.deck:shuffle('nr'..
+    /// G.GAME.round_resets.ante)</c> (state_events.lua:344). Every blind played in that ante draws
+    /// a successive value from this one stream — see <c>Shuffle</c>'s <c>advance</c> parameter.
     /// Ante 1 matches existing <c>startingDraw</c> / ShuffleFinder (<c>nr1</c>).
     /// </summary>
-    public static string ShuffleKeyForRound(int round) =>
-        round <= 1 ? "nr1" : $"nr{round}";
+    public static string ShuffleKeyForAnte(int ante) =>
+        ante <= 1 ? "nr1" : $"nr{ante}";
 
     public static int GetCardChips(MotelyStandardcardRank rank) =>
         rank switch

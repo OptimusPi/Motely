@@ -1125,7 +1125,7 @@ public static class JamlScoring
             for (int i = 0; i < deck.Length; i++)
                 deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
 
-            ctx.Shuffle(MotelyPokerHandEval.ShuffleKeyForRound(ante), deck);
+            ctx.Shuffle(MotelyPokerHandEval.ShuffleKeyForAnte(ante), deck);
             int handSize = Math.Min(8, deck.Length);
             for (int i = 0; i < handSize; i++)
             {
@@ -1152,23 +1152,40 @@ public static class JamlScoring
     {
         int count = 0;
         int[] antes = clause.Antes.Length > 0 ? clause.Antes : [1];
+        int[] rolls = clause.Rolls.Length > 0 ? clause.Rolls : [0];
         foreach (int ante in antes)
         {
-            MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyStandardCard>.ValueCount];
-            for (int i = 0; i < deck.Length; i++)
-                deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
-
-            ctx.Shuffle(MotelyPokerHandEval.ShuffleKeyForRound(ante), deck);
-            int handSize = Math.Min(8, deck.Length);
-            Span<MotelyItem> hand = deck.AsSpan(deck.Length - handSize, handSize);
-            MotelyPokerHand best = MotelyPokerHandEval.BestScore(hand).Type;
-
-            for (int i = 0; i < clause.Hands.Length; i++)
+            string shuffleKey = MotelyPokerHandEval.ShuffleKeyForAnte(ante);
+            foreach (int roll in rolls)
             {
-                if (clause.Hands[i] == best)
+                // Only a blind that is actually played advances nr{ante}; at most three per ante.
+                if (roll < 0 || roll >= PokerHandFilterDesc.MaxBlindsPerAnte)
+                    continue;
+
+                MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyStandardCard>.ValueCount];
+                for (int i = 0; i < deck.Length; i++)
+                    deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
+
+                ctx.Shuffle(shuffleKey, deck, roll);
+                int handSize = Math.Min(8, deck.Length);
+                Span<MotelyItem> hand = deck.AsSpan(deck.Length - handSize, handSize);
+                MotelyPokerHand best = MotelyPokerHandEval.BestScore(hand).Type;
+
+                // Empty = any hand (BoosterPackClause.Packs convention). Every draw has a best
+                // hand, so an "any" clause counts every blind in scope.
+                if (clause.PokerHands.Length == 0)
                 {
                     count++;
-                    break;
+                    continue;
+                }
+
+                for (int i = 0; i < clause.PokerHands.Length; i++)
+                {
+                    if (clause.PokerHands[i] == best)
+                    {
+                        count++;
+                        break;
+                    }
                 }
             }
         }

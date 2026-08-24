@@ -177,7 +177,7 @@ public static partial class JamlConfigLoader
             ErraticRankClause c => WriteErraticRank(c),
             ErraticSuitClause c => WriteErraticSuit(c),
             StartingDrawClause c => WriteStartingDraw(c),
-            PokerHandClause c => WriteItems("pokerHand", c.Hands, c),
+            PokerHandClause c => WriteItems("pokerHand", c.PokerHands, c),
             LuckyMoneyClause c => WriteInlineRollEvent("luckyMoney", c, c.With),
             LuckyMultClause c => WriteInlineRollEvent("luckyMult", c, c.With),
             MisprintMultClause c => WriteMisprint(c),

@@ -42,7 +42,7 @@ public struct ShuffleFinderFilterDesc()
                     for (int i = 0; i < deck.Length; i++)
                         deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
 
-                    searchContext.Shuffle(MotelyPokerHandEval.ShuffleKeyForRound(1), deck);
+                    searchContext.Shuffle(MotelyPokerHandEval.ShuffleKeyForAnte(1), deck);
 
                     Span<MotelyItem> hand = deck.AsSpan().Slice(deck.Length - 13, 13);
 
