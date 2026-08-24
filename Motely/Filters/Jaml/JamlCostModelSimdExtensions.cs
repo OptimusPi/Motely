@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Motely.Filters;
 
 namespace Motely.Filters.Jaml;
@@ -73,6 +74,44 @@ public static class JamlCostModelSimdExtensions
     /// <summary>Estimate a clause and amortize it across the SIMD lanes in one call.</summary>
     public static double SimdProjectedCost(this IJamlClause clause) =>
         (double)clause.EstimateCrunches() / MotelyGlobals.MaxVectorWidth;
+
+    /// <summary>
+    /// The odds that at least <paramref name="atLeast"/> of <paramref name="trials"/> independent
+    /// rolls come up, each with probability <paramref name="p"/>. Every Events family is this one
+    /// shape — n roll indices, a per-roll chance, and a <c>min</c> — so the twelve of them differ
+    /// only in which <c>MotelyGlobals.*Chance</c> they divide by.
+    /// <para>
+    /// <c>with.luck</c> divides into the chance, so <paramref name="p"/> genuinely can arrive
+    /// above 1 — that one is clamped, because certainty is what a lucky enough clause means.
+    /// A clause asking for more hits than it has rolls can never match; that is the validator's
+    /// to reject, and asserting here keeps the hole visible instead of returning a quiet zero.
+    /// </para>
+    /// </summary>
+    public static double AtLeastOf(int atLeast, int trials, double p)
+    {
+        Debug.Assert(atLeast >= 1, "Clause min must be at least 1.");
+        Debug.Assert(atLeast <= trials, "Clause min exceeds its roll count — invalid filter.");
+
+        p = Math.Min(p, 1.0);
+        if (p == 1.0)
+            return 1.0;
+
+        // Sum the tail directly: term_k marches from k to k+1 by the standard ratio, so no
+        // factorials are ever formed and nothing overflows on the way.
+        double q = 1.0 - p;
+        double term = Math.Pow(q, trials); // k = 0
+        double tail = 0.0;
+
+        for (int k = 0; k <= trials; k++)
+        {
+            if (k >= atLeast)
+                tail += term;
+            if (k < trials)
+                term *= (double)(trials - k) / (k + 1) * (p / q);
+        }
+
+        return tail;
+    }
 
     /// <summary>
     /// The must/mustNot chains reordered cheapest-first, without mutating the config.

@@ -44,13 +44,18 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
 
     /// <inheritdoc/>
     public static string[] ClauseKeys =>
-        ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "soulCardOnly", "soulEditionRolls"];
+        ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "joker", "jokers", "soulCardOnly", "soulEditionRolls"];
 
     /// <inheritdoc/>
     public static bool Set(LegendaryJokerClause clause, string key, IJamlValueReader value)
     {
         switch (key.ToLowerInvariant())
         {
+            case "joker":
+            case "jokers":
+                if (!value.TryEnumArray<MotelyJoker>(out var jokers)) return false;
+                clause.Jokers = jokers;
+                return true;
             case "edition":
                 if (!value.TryEnum<MotelyItemEdition>(out var edition)) return false;
                 clause.Edition = edition;
@@ -93,6 +98,17 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
     {
         BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
+
+    /// <summary>
+    /// The Soul at 0.003 per arcana or spectral card behind a weighted pack roll, then one of five
+    /// legendaries with an edition off the soul stream — <see cref="JamlJokerRarity.LegendaryDistribution"/>.
+    /// </summary>
+    public static double EstimateRarity(LegendaryJokerClause clause, in JamlRarityContext ctx) =>
+        JamlCountDistribution.Window(
+            JamlJokerRarity.LegendaryDistribution(clause, in ctx),
+            clause.Min,
+            clause.Max
+        );
 
     public LegendaryJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

@@ -43,6 +43,55 @@ public sealed class CoverageUtilityTests
         Assert.Equal(1, range.EndBatchIndexExclusive);
     }
 
+    /// <summary>
+    /// The two seeds a real interrupted run printed, from the batch it printed beside them. Pinned
+    /// as literals because the failure they guard is silent: the old resume seed put the batch
+    /// digits at the head, which reads back as batch 0, so resuming restarted the whole sweep.
+    /// </summary>
+    [Theory]
+    [InlineData(409387, 4, "1111S7KA")]
+    [InlineData(1449672, 4, "11118FTY")]
+    [InlineData(44799, 4, "1111ZK22")]
+    [InlineData(0, 4, "11111111")]
+    public void SeedMath_BatchIndexToFirstSeed_PutsBatchDigitsInTheTail(
+        long batchIndex,
+        int batchCharCount,
+        string expected
+    )
+    {
+        Assert.Equal(expected, SeedMath.BatchIndexToFirstSeed(batchIndex, batchCharCount));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(4)]
+    [InlineData(7)]
+    public void SeedMath_BatchIndexToFirstSeed_RoundTripsThroughSeedToBatchIndex(int batchCharCount)
+    {
+        long max = (long)Math.Pow(35, 8 - batchCharCount);
+        foreach (
+            long batch in new[] { 0L, 1L, 34L, 35L, 1234L, max / 2, max - 1 }
+                .Where(b => b >= 0 && b < max)
+                .Distinct()
+        )
+        {
+            string seed = SeedMath.BatchIndexToFirstSeed(batch, batchCharCount);
+            Assert.Equal(8, seed.Length);
+            Assert.Equal(batch, SeedMath.SeedToBatchIndex(seed, batchCharCount));
+        }
+    }
+
+    [Fact]
+    public void SeedMath_BatchIndexToFirstSeed_RejectsBatchesOutsideTheSpace()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => SeedMath.BatchIndexToFirstSeed(-1, 4));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            SeedMath.BatchIndexToFirstSeed((long)Math.Pow(35, 4), 4)
+        );
+        Assert.Throws<ArgumentOutOfRangeException>(() => SeedMath.BatchIndexToFirstSeed(0, 8));
+    }
+
     [Fact]
     public void SeedMath_RejectsInvalidInputs()
     {

@@ -242,8 +242,6 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
     // Keep seeds as enumerable - don't materialize! Seeds are used in the order provided.
     // For keyword generation, enumerable is lazy and avoids massive allocations.
     private readonly IEnumerator<string> _seedEnumerator;
-    private string? _currentSeed;
-    private long _seedIndex = -1;
 
     // IEnumerator<T> is not thread-safe; lock is intentional.
     private readonly object _enumeratorLock = new();
@@ -277,13 +275,7 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
     {
         lock (_enumeratorLock)
         {
-            _seedIndex++;
-            if (_seedEnumerator.MoveNext())
-            {
-                _currentSeed = _seedEnumerator.Current;
-                return _currentSeed;
-            }
-            return string.Empty;
+            return _seedEnumerator.MoveNext() ? _seedEnumerator.Current : string.Empty;
         }
     }
 
@@ -297,12 +289,10 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
             int count = 0;
             for (int i = 0; i < seeds.Length; i++)
             {
-                _seedIndex++;
                 if (!_seedEnumerator.MoveNext())
                     break;
 
-                _currentSeed = _seedEnumerator.Current;
-                seeds[i] = _currentSeed;
+                seeds[i] = _seedEnumerator.Current;
                 count++;
             }
             return count;

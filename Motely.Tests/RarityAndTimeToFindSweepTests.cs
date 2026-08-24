@@ -263,36 +263,33 @@ public sealed class RarityAndTimeToFindSweepTests(ITestOutputHelper output)
     {
         string oneIn = OneInNotation(matches, searched);
         string time = matches > 0
-            ? EstimateTimeToFind(matches, searched, elapsed)
+            ? MeasuredTimeToFind(matches, searched, elapsed)
             : $"(0 in {searched:N0})";
         return $"{name,-38} {oneIn,-16} {matches}/{searched,-14:N0} {time}";
     }
 
-    /// <summary>"1 in 1.53M" style. Zero matches → "&gt; 1 in {searched}".</summary>
-    internal static string OneInNotation(long matches, long searched)
-    {
-        if (searched <= 0)
-            return "n/a";
-        if (matches <= 0)
-            return $"> 1 in {Humanize(searched)}";
-        double n = searched / (double)matches;
-        return $"1 in {Humanize(n)}";
-    }
+    /// <summary>
+    /// "1 in 1.53M" style, from <see cref="JamlRarityReport"/> so the sweep report and the
+    /// pre-search block cannot drift apart in how they spell the same quantity.
+    /// </summary>
+    internal static string OneInNotation(long matches, long searched) =>
+        JamlRarityReport.OneInNotation(matches, searched);
 
-    /// <summary>Extrapolate wall-clock time to find one, from this run's measured throughput.</summary>
-    private static string EstimateTimeToFind(long matches, long searched, TimeSpan elapsed)
+    /// <summary>
+    /// Extrapolate wall-clock time to find one, from this run's measured throughput.
+    /// <para>
+    /// Formats through <see cref="JamlRarityReport.Duration"/>. The local version this replaced
+    /// used <c>hh\:mm\:ss</c>, whose hours component wraps at a day — so every rare row in this
+    /// table that took longer than 24h to find printed a number 24 hours too small, silently.
+    /// </para>
+    /// </summary>
+    private static string MeasuredTimeToFind(long matches, long searched, TimeSpan elapsed)
     {
         double seedsPerSec = elapsed.TotalSeconds > 0 ? searched / elapsed.TotalSeconds : 0;
-        double seedsPerHit = searched / (double)matches;
         if (seedsPerSec <= 0)
             return "(too fast to time)";
-        double secs = seedsPerHit / seedsPerSec;
-        return secs < 1 ? $"{secs * 1000:N0} ms" : TimeSpan.FromSeconds(secs).ToString(@"hh\:mm\:ss");
+        return JamlRarityReport.Duration(
+            JamlRarityReport.SecondsToFirstMatch(matches / (double)searched, seedsPerSec)
+        );
     }
-
-    private static string Humanize(double n) =>
-        n >= 1_000_000_000 ? $"{n / 1e9:0.##}B"
-        : n >= 1_000_000 ? $"{n / 1e6:0.##}M"
-        : n >= 1_000 ? $"{n / 1e3:0.##}K"
-        : $"{n:N0}";
 }

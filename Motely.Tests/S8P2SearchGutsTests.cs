@@ -140,6 +140,56 @@ public sealed class S8P2SearchGutsTests
         Assert.Equal(search.TotalSeedsSearched, search.MatchingSeeds);
     }
 
+    /// <summary>
+    /// The ETA counts only the batches the run was asked for. It used to count to the end of the
+    /// whole space, so a bounded run quoted the time to sweep everything after it: a one-batch
+    /// range that finished in twelve seconds reported 148 days.
+    /// <para>
+    /// Both assertions are exact rather than timing-tolerant, because the ratio is exact. Two
+    /// batches requested: at the first report half the run is done, so the time left equals the
+    /// time spent; at the second the run is over, so it is zero. Under the old denominator the
+    /// first report would read <c>elapsed × (42875/1 − 1)</c> — same arithmetic, wrong divisor.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task SequentialSlice_EtaCountsOnlyTheBatchesTheRunAskedFor()
+    {
+        var progress = new List<MotelyProgress>();
+        using var search = JamlSearchBuilder
+            .CreateSettings(Permissive())
+            .WithSequentialSearch()
+            .WithBatchCharacterCount(3) // 35³ = 42,875 batches exist; this run wants two of them
+            .WithStartBatchIndex(10)
+            .WithEndBatchIndex(12)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .WithProgressCallback(p =>
+            {
+                lock (progress)
+                    progress.Add(p);
+            })
+            .WithProgressReportIntervalMs(0)
+            .CreateSearch();
+
+        var task = search.RunSearchAsync();
+        await search.WaitForCompletionAsync();
+        await task;
+
+        Assert.Equal(2, progress.Count);
+
+        // Half done: the run has as long left as it has already taken.
+        Assert.Equal(
+            progress[0].ElapsedMilliseconds,
+            progress[0].EstimatedTimeRemainingMilliseconds
+        );
+
+        // Done: nothing left. The old denominator made this the tail of the entire space.
+        Assert.Equal(0L, progress[^1].EstimatedTimeRemainingMilliseconds);
+
+        // A start index above zero is part of the denominator too — 12 − 10, not 12 − 0.
+        Assert.Equal(12L, search.CompletedBatchCount);
+    }
+
     // ── Sequential slice: progress, counters, async completion ─────────────
 
     [Fact]

@@ -37,7 +37,9 @@ public enum MotelyShopStreamFlags
 
 public partial class MotelySingleSearchContext
 {
-    private const int ShopJokerRate = 20;
+    // Internal rather than private so the rarity model reads the same constant the shop rolls
+    // against, instead of carrying its own copy that can drift.
+    internal const int ShopJokerRate = 20;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelySingleShopItemStream CreateShopItemStream(

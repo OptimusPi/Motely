@@ -128,34 +128,53 @@ internal static class CliSearchMode
         string[]? explicitSeeds = null;
         SeedSourceProvider? streamingProvider = null;
 
+        bool drownFellBackToSequential = false;
         if (hasDrownMode)
         {
-            // Cannonball: every seed ever saved under the lake root, every filter, deduped.
+            // Cannonball: every seed ever saved — the lake root (every filter, deduped) plus
+            // this JAML's own seeds: block, which is saved output the lake may predate.
             string lakeRoot = SeedLakeSink.LakeRoot(input.ResultsRootPath);
-            if (!Directory.Exists(lakeRoot))
+            bool hasJamlSeeds = input.JamlSeeds is { Count: > 0 };
+            if (!Directory.Exists(lakeRoot) && !hasJamlSeeds)
             {
-                error = $"Error: no seed lake at '{lakeRoot}'. Run a search first.";
-                return false;
+                drownFellBackToSequential = true;
             }
-
-            try
+            else
             {
-                var drownProvider = SeedSourceProvider.FromLakeRoot(lakeRoot);
-                if (drownProvider.SeedCount == 0)
+                try
                 {
-                    drownProvider.Dispose();
-                    error = $"Error: the seed lake at '{lakeRoot}' is empty. Run a search first.";
+                    var drownProvider = SeedSourceProvider.FromLakeRoot(
+                        lakeRoot,
+                        hasJamlSeeds ? input.JamlSeeds : null
+                    );
+                    if (drownProvider.SeedCount == 0)
+                    {
+                        drownProvider.Dispose();
+                        drownFellBackToSequential = true;
+                    }
+                    else
+                    {
+                        updated = updated.WithProviderSearch(drownProvider);
+                        sourceLifetime = drownProvider;
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    error = $"Error: could not read seed lake '{lakeRoot}': {ex.Message}";
                     return false;
                 }
-                updated = updated.WithProviderSearch(drownProvider);
-                sourceLifetime = drownProvider;
             }
-            catch (Exception ex)
-            {
-                error = $"Error: could not read seed lake '{lakeRoot}': {ex.Message}";
-                return false;
-            }
-            return true;
+
+            // Nothing saved anywhere yet — there is no haystack to drown in. That is not a
+            // reason to refuse the run: the sequential sweep below is exactly what fills the
+            // lake, so --drown degrades to it and says so, instead of telling the operator
+            // to "run a search first" while they are running one.
+            writeWarning?.Invoke(
+                $"Note: nothing to drown in yet — the seed lake at '{lakeRoot}' holds no seeds"
+                    + (input.JamlPath is not null ? " and the JAML has no seeds: block" : "")
+                    + ". Running the default sequential sweep instead; every find lands in the lake for the next --drown."
+            );
         }
 
         if (hasReplayMode)
@@ -304,7 +323,8 @@ internal static class CliSearchMode
         // only when the caller picked no explicit search input above. An explicit mode
         // (--keyword, --random, --aesthetic, --source, --seeds) already installed its provider;
         // reaching the block below would silently stomp it back to sequential.
-        if (explicitSearchModeCount > 0)
+        // --drown with nothing saved anywhere is the one explicit mode that degrades here.
+        if (explicitSearchModeCount > 0 && !drownFellBackToSequential)
             return true;
 
         // Sequential is the default, always. A JAML `seeds:` block is saved *output* — the engine

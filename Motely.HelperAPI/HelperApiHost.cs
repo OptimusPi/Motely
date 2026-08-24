@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Motely.DistributedWorker;
 
@@ -18,6 +19,13 @@ public static class HelperApiHost
     public static WebApplication Build(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        // ── Aspire service defaults — OTel traces/metrics, service discovery, HTTP resilience.
+        //    Not calling MapDefaultEndpoints() below: it would register its own "/health" via
+        //    MapHealthChecks, colliding with this file's existing custom "/health" (which also
+        //    reports MotelyVersion) — two GET handlers on the same path is an ambiguous match
+        //    at request time, not a build-time error.
+        builder.AddServiceDefaults();
 
         // ── AOT-safe JSON ───────────────────────────────────────────────────
         builder.Services.ConfigureHttpJsonOptions(o =>

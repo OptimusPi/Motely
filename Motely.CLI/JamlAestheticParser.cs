@@ -14,16 +14,16 @@ public static class JamlAestheticParser
     /// </summary>
     private static readonly (string Jaml, JamlAesthetic Value)[] Known =
     [
-        ("palindrome", JamlAesthetic.Palindrome),
-        ("psychosis", JamlAesthetic.Psychosis),
-        ("mirror", JamlAesthetic.Mirror),
-        ("repeater", JamlAesthetic.Repeater),
-        ("step", JamlAesthetic.Step),
-        ("leet", JamlAesthetic.Leet),
+        ("balatro", JamlAesthetic.Balatro),
         ("gross", JamlAesthetic.Gross),
         ("funny", JamlAesthetic.Funny),
-        ("balatro", JamlAesthetic.Balatro),
         ("nsfw", JamlAesthetic.Nsfw),
+        ("mirror", JamlAesthetic.Mirror),
+        ("repeater", JamlAesthetic.Repeater),
+        ("palindrome", JamlAesthetic.Palindrome),
+        ("step", JamlAesthetic.Step),
+        ("leet", JamlAesthetic.Leet),
+        ("psychosis", JamlAesthetic.Psychosis),
     ];
 
     /// <summary>CLI meta-token: run every aesthetic family (not a <see cref="JamlAesthetic"/> value).</summary>

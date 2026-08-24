@@ -11,6 +11,13 @@
     <PackageVersion Include="Bootsharp.Inject" Version="0.9.0" />
     <PackageVersion Include="Bootsharp.FileSystem" Version="2026.4.30.1559" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.8.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.3" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
@@ -35,8 +42,12 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.5" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
-    <!-- Motely.Mcp (added 2026-06-28) — VERIFY ModelContextProtocol version with `dotnet restore` and bump to latest preview if it fails. -->
-    <PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.3" />
+    <!-- Motely.MCP — verified current via `dotnet package search ModelContextProtocol` (2026-08-19). -->
+    <PackageVersion Include="ModelContextProtocol" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
+    <!-- Motely.AppHost — pinned to the Aspire.AppHost.Sdk version (13.5.0) in Motely.AppHost.csproj. -->
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.5.0" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.0" />
   </ItemGroup>
 </Project>

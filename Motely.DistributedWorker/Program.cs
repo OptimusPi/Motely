@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Motely;
+using Motely.DataLake;
 using Motely.DistributedWorker;
 using Motely.Filters;
 using Motely.Filters.Jaml;
@@ -8,7 +9,7 @@ using Motely.Filters.Jaml;
 /// Motely Distributed Worker — AOT native Linux executable.
 ///
 /// Connects to the seed-finder pool and claims one block (35^5 seeds) at a time.
-/// <see cref="Motely.DB.SeedSource.SeedResultSinkDirectory"/> writes all filters into one shared DuckLake root (partitioned by filter_id).
+/// <c>Motely.DataLake</c> writes every filter into one shared DuckLake (rows tagged by filter_id).
 ///
 /// Usage:
 ///   MotelyWorker --pool https://www.seedfinder.app
@@ -17,7 +18,7 @@ using Motely.Filters.Jaml;
 ///   --threads N           Motely search thread count for each claimed block (SIMD workers inside one block)
 ///   --worker-id id        Worker identifier (default: hostname-pid)
 ///   --filter filterId     Only claim blocks for this filter (optional; omit for any active filter)
-///   --local-db ./dir      Shared DuckLake directory (default: Seeds/ducklake)
+///   --local-db ./dir      Seed lake data root (default: Seeds; catalog ducklake.sqlite beside it)
 ///                         Set to "-" to disable local saving.
 /// </summary>
 class Program
@@ -25,7 +26,7 @@ class Program
     static async Task<int> Main(string[] args)
     {
         // ── Parse args ──────────────────────────────────────────────────
-        string? url = null, workerId = null, filterId = null, partyId = null, localDbDir = "Seeds/ducklake";
+        string? url = null, workerId = null, filterId = null, partyId = null, localDbDir = "Seeds";
         string serverUrl = "https://www.seedfinder.app";
         int threads = Environment.ProcessorCount;
 
@@ -63,7 +64,7 @@ class Program
             Console.Error.WriteLine("  --threads <N>        Search threads per claimed block (default: all cores)");
             Console.Error.WriteLine("  --worker-id <id>     Worker identifier (pool mode only, optional)");
             Console.Error.WriteLine("  --filter <filterId>  Only claim blocks for this filter (pool mode only)");
-            Console.Error.WriteLine("  --local-db <dir>     Shared DuckLake root (default: Seeds/ducklake)");
+            Console.Error.WriteLine("  --local-db <dir>     Seed lake data root (default: Seeds; catalog ducklake.sqlite beside it)");
             Console.Error.WriteLine("                       Use '-' to disable local saving");
             return 1;
         }
@@ -75,7 +76,7 @@ class Program
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
         return partyId != null
-            ? await RunPartyMode(serverUrl, partyId, threads, cts)
+            ? await RunPartyMode(serverUrl, partyId, threads, localDbDir, cts)
             : await RunPoolMode(url!, workerId, threads, filterId, localDbDir, cts);
     }
 
@@ -84,11 +85,13 @@ class Program
     //  Lease a block range, grind it, heartbeat while grinding, report
     //  candidate seeds (the server re-verifies and scores them itself).
     // ═══════════════════════════════════════════════════════════════════
-    static async Task<int> RunPartyMode(string serverUrl, string partyId, int threads, CancellationTokenSource cts)
+    static async Task<int> RunPartyMode(string serverUrl, string partyId, int threads, string? localDbDir, CancellationTokenSource cts)
     {
         using var party = new PartyClient(serverUrl);
 
         Console.Error.WriteLine($"[MotelyWorker] Party {partyId} @ {serverUrl} | Threads: {threads}");
+        if (localDbDir != null)
+            Console.Error.WriteLine($"[MotelyWorker] Local seed lake: {Path.GetFullPath(localDbDir)} (catalog {SeedLake.CatalogPathFor(localDbDir)})");
         Console.Error.WriteLine();
 
         long totalSeedsSearched = 0;
@@ -136,6 +139,10 @@ class Program
             var seeds = new List<string>(capacity: 256);
             long matchesFound = 0;
             var plan = JamlSearchBuilder.CreatePlan(config);
+            // Every find also lands in the local seed lake under the party JAML's own id — the report
+            // cap above only limits what crosses the wire, never what this machine keeps.
+            using var lake = localDbDir is null ? null
+                : new SeedLakeSink(localDbDir, config.Id, plan.ScoreTallyColumnCount > 0 ? plan.TallyLabels : null);
             var settings = plan.Settings
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
@@ -147,6 +154,7 @@ class Program
             if (plan.ScoreTallyColumnCount > 0)
                 settings = settings.WithScoredResultCallback(t =>
                 {
+                    lake?.OnScored(in t);
                     lock (seeds) { matchesFound++; if (seeds.Count < ReportCap) seeds.Add(t.Seed); }
                 });
             else
@@ -154,6 +162,7 @@ class Program
                 {
                     int comma = line.IndexOf(',');
                     var seed = comma < 0 ? line : line[..comma];
+                    lake?.OnSeed(seed);
                     lock (seeds) { matchesFound++; if (seeds.Count < ReportCap) seeds.Add(seed); }
                 });
 
@@ -265,7 +274,7 @@ class Program
         if (targetFilterId != null)
             Console.Error.WriteLine($"[MotelyWorker] Targeting filter: {targetFilterId}");
         if (localDbDir != null)
-            Console.Error.WriteLine($"[MotelyWorker] Local DuckLake root: {Path.GetFullPath(localDbDir)} (filter_id partitions)");
+            Console.Error.WriteLine($"[MotelyWorker] Local seed lake: {Path.GetFullPath(localDbDir)} (catalog {SeedLake.CatalogPathFor(localDbDir)})");
         Console.Error.WriteLine("[MotelyWorker] Waiting for work...");
         Console.Error.WriteLine();
 
@@ -333,14 +342,26 @@ class Program
                     .WithEndBatchIndex(endBatchExclusive)
                     .WithSequentialSearch();
 
+                // ── LOCAL SEED LAKE ──────────────────────────────────────
+                // Every find streams into the shared lake under the pool's filter id as it is
+                // found, so it is on disk whether or not the submit below ever succeeds.
+                using var lake = localDbDir is null ? null : new SeedLakeSink(localDbDir, claim.FilterId);
+
                 settings.WithSeedMatchCallback(line =>
                 {
                     int comma = line.IndexOf(',');
-                    if (comma < 0) { matchResults.Add(new SeedResultDto { Seed = line }); return; }
+                    if (comma < 0)
+                    {
+                        matchResults.Add(new SeedResultDto { Seed = line });
+                        lake?.Write(line, null);
+                        return;
+                    }
                     string seed = line[..comma];
                     int comma2 = line.IndexOf(',', comma + 1);
                     var scoreSpan = comma2 >= 0 ? line.AsSpan(comma + 1, comma2 - comma - 1) : line.AsSpan(comma + 1);
-                    matchResults.Add(new SeedResultDto { Seed = seed, Score = int.TryParse(scoreSpan, out int s) ? s : 0 });
+                    int? score = int.TryParse(scoreSpan, out int s) ? s : null;
+                    matchResults.Add(new SeedResultDto { Seed = seed, Score = score ?? 0 });
+                    lake?.Write(seed, score);
                 });
 
                 try
@@ -360,8 +381,6 @@ class Program
                 totalMatches += matchResults.Count;
 
                 var results = matchResults.ToArray();
-
-                // ── SAVE TO LOCAL DUCKLAKE ────────────────────────────────
 
                 // ── SUBMIT TO POOL ───────────────────────────────────────
                 var submitBody = new SubmitResultsDto

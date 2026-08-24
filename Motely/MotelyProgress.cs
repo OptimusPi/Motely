@@ -6,8 +6,6 @@ namespace Motely;
 /// </summary>
 public sealed record MotelyProgress
 {
-    public long CompletedBatchCount { get; set; }
-    public long TotalBatchCount { get; set; }
     public long SeedsSearched { get; set; }
     public long MatchingSeeds { get; set; }
     public double SeedsPerMillisecond { get; set; }

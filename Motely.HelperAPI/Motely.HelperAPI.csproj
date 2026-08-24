@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
     <ProjectReference Include="..\Motely.DistributedWorker\Motely.DistributedWorker.csproj" />
+    <ProjectReference Include="..\Motely.ServiceDefaults\Motely.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <!-- DuckDB.NET uses P/Invoke (fully AOT-safe) but triggers static analysis warnings. Suppress them. -->

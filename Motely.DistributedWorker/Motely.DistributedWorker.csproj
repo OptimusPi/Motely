@@ -28,6 +28,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.DataLake\Motely.DataLake.csproj" />
   </ItemGroup>
 
   <!-- DuckDB.NET uses P/Invoke (fully AOT-safe) but triggers static analysis warnings. Suppress them. -->

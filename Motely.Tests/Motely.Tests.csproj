@@ -14,6 +14,8 @@
     <ProjectReference Include="../Motely.DataLake/Motely.DataLake.csproj" />
     <ProjectReference Include="../Motely.Lsp/Motely.Lsp.csproj" />
     <ProjectReference Include="../Motely.Lsp.Core/Motely.Lsp.Core.csproj" />
+    <!-- AppHostModelTests: the Aspire composition, built (not started) in-process. -->
+    <ProjectReference Include="../Motely.AppHost/Motely.AppHost.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,6 +25,7 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Verify.Xunit" />
     <PackageReference Include="Verify.DiffPlex" />
+    <PackageReference Include="Aspire.Hosting.Testing" />
   </ItemGroup>
 
   <ItemGroup>

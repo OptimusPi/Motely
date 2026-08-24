@@ -276,6 +276,17 @@ public static class JamlLanguageService
                     .Any(k => k.Equals(head, StringComparison.OrdinalIgnoreCase))
             )
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d switch
+            {
+                "joker" => 0,
+                "voucher" => 1,
+                "tarot" => 2,
+                "planet" => 3,
+                "spectral" => 4,
+                "boosterPack" => 5,
+                _ => 10
+            })
+            .ThenBy(d => d, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (clauseOwners.Length > 0)
         {

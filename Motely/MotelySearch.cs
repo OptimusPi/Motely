@@ -566,20 +566,38 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
 public interface IMotelySearch : IDisposable
 {
+    /// <summary>Wall-clock of the run: first thread in to last thread out. Report it; don't divide by it.</summary>
     long ElapsedMs { get; }
     long TotalSeedsSearched { get; }
     long MatchingSeeds { get; }
     long FilteredSeeds { get; }
+
+    /// <summary>
+    /// Engine throughput: the sum over threads of (that thread's seeds ÷ that thread's own running
+    /// time). Each thread is its own search with its own clock, so a thread that started late,
+    /// finished early, or sat waiting on a provider doesn't dilute the others. Not equal to
+    /// <see cref="TotalSeedsSearched"/> ÷ <see cref="ElapsedMs"/>, on purpose.
+    /// </summary>
+    double SeedsPerSecond { get; }
+
     bool IsCompleted { get; }
     bool IsSequentialBatchSearch { get; }
-    long BatchIndex { get; }
     long CompletedBatchCount { get; }
+
+    /// <summary>Sequential: batches in the whole space for this batchCharCount (35^(8−n)). Provider: report batches in the list.</summary>
+    long TotalBatchCount { get; }
+
+    /// <summary>
+    /// Sequential: the lowest batch index no thread has run yet — every batch below it is done, so a
+    /// <c>--startBatch</c> from here re-covers at most threadCount−1 batches and skips none. −1 in
+    /// provider mode.
+    /// </summary>
+    long ResumeBatchIndex { get; }
 
     /// <summary>
     /// True when the run ended because <see cref="MotelySearchSettings{TBaseFilter}.StopAfterMatches"/>
-    /// was reached rather than because the space ran out. Throughput is not a meaningful number for
-    /// such a run — it stopped on purpose, mid-batch — so callers should report time-to-find instead
-    /// of seeds/sec.
+    /// was reached rather than because the space ran out. Seeds searched and <see cref="SeedsPerSecond"/>
+    /// are still real for such a run; callers may additionally report time-to-find.
     /// </summary>
     bool StoppedOnMatchLimit { get; }
 
@@ -645,15 +663,15 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
     private readonly long _startBatchIndex;
     private readonly long _endBatchIndex;
-    private long _batchIndex;
     private readonly MotelySearchPlan[] _plans;
     private readonly int _threadCount;
     private readonly bool _runInline;
 
-    // True when exactly one thread ever advances _batchIndex: the browser pump (single thread,
-    // regardless of how many plans ProcessorCount allocated) or a 1-thread native run. Lets
-    // TryExecuteSequentialBatch use a plain increment instead of an atomic it can't contend on.
-    private readonly bool _singleBatchConsumer;
+    // How many plans actually run batches. Sequential batches are dealt out statically: plan i
+    // owns start+i, start+i+W, start+i+2W, … with W = _workerCount, so no thread ever touches a
+    // shared batch counter. On the browser only plan 0 is pumped (one thread, however many
+    // plans ProcessorCount allocated), so W = 1 there and plan 0 walks every batch.
+    private readonly int _workerCount;
 
     // Native worker threads, kept so Dispose can Join them before freeing the native memory
     // they read — a thread still mid-batch is dereferencing buffers Dispose would otherwise
@@ -667,7 +685,32 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     /// <inheritdoc />
     public bool StoppedOnMatchLimit => Volatile.Read(ref _stoppedOnMatchLimit) != 0;
 
-    public long BatchIndex => _batchIndex;
+    public long TotalBatchCount => _plans[0].MaxBatch;
+
+    public long ResumeBatchIndex
+    {
+        get
+        {
+            if (_isProviderMode)
+                return -1;
+            // Only plans that actually run own a cursor; the rest never moved off their start.
+            long min = long.MaxValue;
+            for (int i = 0; i < _workerCount; i++)
+                min = Math.Min(min, _plans[i].SnapshotNextBatch());
+            return Math.Max(_startBatchIndex, min);
+        }
+    }
+
+    public double SeedsPerSecond
+    {
+        get
+        {
+            double sum = 0;
+            for (int i = 0; i < _plans.Length; i++)
+                sum += _plans[i].SnapshotSeedsPerSecond();
+            return sum;
+        }
+    }
 
     // Batches actually completed (aggregated from thread-local counters)
     public long CompletedBatchCount
@@ -690,7 +733,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         get
         {
             // One path: both modes count seeds they looked at. Deriving sequential from
-            // completedBatches * SeedsPerBatch credits a whole batch to a run that stopped inside
+            // completedBatches × seeds-per-batch credits a whole batch to a run that stopped inside
             // one, which is wrong by up to 35^batchCharCount per thread.
             long totalSeeds = 0;
             for (int i = 0; i < _plans.Length; i++)
@@ -733,7 +776,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     }
 
     public long ElapsedMs => _elapsedTime.ElapsedMilliseconds;
-    public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
 
     /// <summary>
     /// Tries to get the score provider if one was configured.
@@ -838,10 +880,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         _startBatchIndex = settings.StartBatchIndex;
         _endBatchIndex = settings.EndBatchIndex;
 
-        // Initialize to one BEFORE start since ThreadMain increments BEFORE searching
-        // StartBatchIndex is always >= 0 now (defaults to 0)
-        _batchIndex = _startBatchIndex - 1;
-
         int[] pseudohashKeyLengths = [.. filterCreationContext.CachedPseudohashKeyLengths];
         _pseudoHashKeyLengthCount = pseudohashKeyLengths.Length;
 
@@ -857,7 +895,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         // on every platform, including the browser's single thread where the pump would deadlock
         // it. Generative providers (sequential, random, aesthetic) are open-ended and still pump.
         _runInline = settings.SeedProvider is MotelySeedListProvider;
-        _singleBatchConsumer = OperatingSystem.IsBrowser() || _threadCount == 1;
+        _workerCount = OperatingSystem.IsBrowser() ? 1 : _threadCount;
         _plans = new MotelySearchPlan[_threadCount];
         for (int i = 0; i < _threadCount; i++)
         {
@@ -885,6 +923,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     /// <summary>Single place to complete <see cref="_completionSource"/> after worker(s) finish (sync path).</summary>
     private void SignalSearchCompleted()
     {
+        _elapsedTime.Stop();
         Thread.MemoryBarrier();
         bool stoppedOnLimit = Volatile.Read(ref _stoppedOnMatchLimit) != 0;
         bool completed =
@@ -1074,6 +1113,9 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             {
                 if (Interlocked.Decrement(ref _remaining) == 0)
                 {
+                    // Last worker out stops the wall clock, so ElapsedMs is "first in → last out"
+                    // and not "…plus however long the caller took to read it".
+                    _owner._elapsedTime.Stop();
                     Thread.MemoryBarrier();
                     var err = Volatile.Read(ref _firstError);
                     if (err is not null)
@@ -1121,9 +1163,20 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         long prevReportMs = _lastProgressReportElapsedMs;
         _lastProgressReportElapsedMs = elapsedMS;
 
-        long thisCompletedCount = CompletedBatchCount;
+        // One pass over the plans for every counter this report needs.
+        long completedBatches = 0,
+            seedsSearched = 0,
+            matchingSeeds = 0;
+        for (int i = 0; i < _plans.Length; i++)
+        {
+            completedBatches += _plans[i].SnapshotBatchesCompleted();
+            seedsSearched += _plans[i].SnapshotSeedsSearched();
+            matchingSeeds += _plans[i].SnapshotMatchingSeeds();
+        }
+        long thisCompletedCount = _isProviderMode
+            ? completedBatches
+            : _startBatchIndex + completedBatches;
         long totalBatches = _plans[0].MaxBatch;
-        long seedsSearched = TotalSeedsSearched;
 
         double percentComplete;
         double totalPortionFinished;
@@ -1139,7 +1192,12 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         else
         {
             long batchesSinceStart = thisCompletedCount - _startBatchIndex;
-            long totalBatchesToDo = _plans[0].MaxBatch - _startBatchIndex;
+            // Only the batches this run was actually asked for, which is where the ETA below gets
+            // its denominator. Counting to MaxBatch instead ignored --endBatch/--stopSeed entirely
+            // and quoted the rest of the *space*: a one-batch range that finished in twelve seconds
+            // reported an ETA of 148 days. Both ends are exclusive, so the difference is a count.
+            long lastBatchToDo = Math.Min(_endBatchIndex, _plans[0].MaxBatch);
+            long totalBatchesToDo = lastBatchToDo - _startBatchIndex;
             totalPortionFinished = totalBatches > 0 ? (double)thisCompletedCount / totalBatches : 0;
             percentComplete = totalPortionFinished * 100.0;
             thisPortionFinished =
@@ -1179,10 +1237,8 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
         var progress = new MotelyProgress
         {
-            CompletedBatchCount = thisCompletedCount,
-            TotalBatchCount = totalBatches,
             SeedsSearched = seedsSearched,
-            MatchingSeeds = MatchingSeeds,
+            MatchingSeeds = matchingSeeds,
             SeedsPerMillisecond = seedsPerMs,
             PercentComplete = percentComplete,
             ElapsedMilliseconds = elapsedMS,
@@ -1248,7 +1304,16 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         public readonly int ThreadIndex;
 
         public long MaxBatch { get; internal set; }
-        public long SeedsPerBatch { get; internal set; }
+
+        // Each plan is its own search with its own clock: started by the first batch it runs,
+        // stopped when it runs out of work (or is cancelled/disposed). Seeds ÷ this clock is that
+        // thread's true rate — no idle, no waiting-for-another-thread, no "last one out" tail.
+        private readonly Stopwatch _clock = new();
+
+        // Sequential only: the next batch this plan will run. Dealt statically — plan i starts at
+        // start+i and steps by Search._workerCount — so there is no shared counter to contend on
+        // and a 1-thread run (WASM, --threads 1) is a plain loop. Provider plans never touch it.
+        private long _nextBatch;
 
         // ========== THREAD-LOCAL PERFORMANCE ARCHITECTURE ==========
         // PATTERN: Thread-local accumulate → Batch-boundary pull/clear → Global aggregate
@@ -1315,6 +1380,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         {
             Search = search;
             ThreadIndex = threadIndex;
+            _nextBatch = search._startBatchIndex + threadIndex;
 
             if (search._additionalFilters.Length != 0)
             {
@@ -1375,16 +1441,25 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         /// </summary>
         internal bool TryExecuteSequentialBatch()
         {
+            // Clock wraps the body: running while this plan has work, stopped the moment it
+            // runs out, so SnapshotSeedsPerSecond is this thread's honest rate.
+            _clock.Start();
+            if (ExecuteSequentialBatchCore())
+                return true;
+            _clock.Stop();
+            return false;
+        }
+
+        private bool ExecuteSequentialBatchCore()
+        {
             if (Volatile.Read(ref Search._isDisposed) != 0)
                 return false;
 
             if (Search._cancellationToken.IsCancellationRequested)
                 return false;
 
-            long batchIdx = Search._singleBatchConsumer
-                ? ++Search._batchIndex
-                : Interlocked.Increment(ref Search._batchIndex);
-
+            // Static deal: this plan's next batch, no shared counter (see _nextBatch).
+            long batchIdx = _nextBatch;
             if (batchIdx >= Search._endBatchIndex || batchIdx >= MaxBatch)
                 return false;
 
@@ -1398,9 +1473,18 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 Volatile.Read(ref Search._isDisposed) == 0
                 && !Search._cancellationToken.IsCancellationRequested
             )
+            {
                 _localBatchesCompleted++;
+                // Advance only past a batch that ran to the end: an abandoned one stays as this
+                // plan's next, so ResumeBatchIndex (min over plans) re-covers it instead of
+                // skipping it.
+                _nextBatch = batchIdx + Search._workerCount;
+            }
 
-            // Check for timed-out filter batches
+            // Flush any additional-filter batch that has been waiting for lanes too long, so a
+            // rare base filter still gets its matches through the chain promptly. WaitStartMS is
+            // stamped when the batch takes its first seed (see BatchSeeds); TickCount64 on both
+            // sides — cheap, no QPC on the batch path.
             if (Search._additionalFilters.Length != 0)
             {
                 for (int i = 0; i < Search._additionalFilters.Length; i++)
@@ -1409,10 +1493,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
                     if (batch->SeedCount != 0)
                     {
-                        if (
-                            Search._elapsedTime.ElapsedMilliseconds - batch->WaitStartMS
-                            >= MAX_SEED_WAIT_MS
-                        )
+                        if (Environment.TickCount64 - batch->WaitStartMS >= MAX_SEED_WAIT_MS)
                         {
                             SearchFilterBatch(i, batch);
                             Debug.Assert(
@@ -1443,6 +1524,17 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         /// here batch size only amortizes progress chat and interop over huge provider streams.
         /// </summary>
         internal bool TryExecuteProviderBatch()
+        {
+            // Same clock discipline as the sequential side: runs while this plan has seeds,
+            // stops when the provider (or the run) is done.
+            _clock.Start();
+            if (ExecuteProviderBatchCore())
+                return true;
+            _clock.Stop();
+            return false;
+        }
+
+        private bool ExecuteProviderBatchCore()
         {
             if (Volatile.Read(ref Search._isDisposed) != 0)
                 return false;
@@ -1538,6 +1630,20 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal long SnapshotSeedsSearched() => Volatile.Read(ref _localSeedsSearched);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal long SnapshotNextBatch() => Volatile.Read(ref _nextBatch);
+
+        /// <summary>
+        /// This thread's own rate: its seeds ÷ its own clock. Read from the reporting thread
+        /// while the worker runs, so the two reads can straddle a batch — a transient under-read
+        /// by at most one batch, never a wrong total (the summary reads after the clock stopped).
+        /// </summary>
+        internal double SnapshotSeedsPerSecond()
+        {
+            double seconds = _clock.Elapsed.TotalSeconds;
+            return seconds > 0 ? Volatile.Read(ref _localSeedsSearched) / seconds : 0;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void SearchSeeds(in MotelySearchContextParams searchContextParams)
@@ -1728,6 +1834,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                     if (seedBatchIndex == 0)
                     {
                         filterBatch->SeedLength = searchParams.SeedLength;
+                        filterBatch->WaitStartMS = Environment.TickCount64;
                     }
                     else
                     {
@@ -1745,6 +1852,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                             seedBatchIndex = 0;
 
                             filterBatch->SeedLength = searchParams.SeedLength;
+                            filterBatch->WaitStartMS = Environment.TickCount64;
                         }
                         // else: Same length - seedBatchIndex already equals current SeedCount, ready to use
                     }
@@ -1943,8 +2051,14 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
         private readonly Vector512<double>* _seedCharacterMatrix;
 
-        // Thread-local seed batch buffer to avoid allocations per batch
-        private readonly string[] _seedBatchBuffer = new string[MotelyGlobals.MaxVectorWidth];
+        // Seeds arrive in chunks: one call on the (locked) provider fills the whole buffer, then
+        // this plan peels 8-seed SIMD packs off it locally. Chunk = the report batch, capped, so
+        // a thread takes the provider lock once per progress tick instead of once per pack —
+        // the lock stops being the throughput ceiling, and a 1-thread run never contends at all.
+        private readonly string[] _seedBatchBuffer;
+        private int _bufferCount;
+        private int _bufferPos;
+        private const int MaxFetchChunk = 4096;
 
         public MotelyProviderSearchPlan(
             MotelySearch<TBaseFilter> search,
@@ -1971,7 +2085,9 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 seedCount >= 0
                     ? (seedCount + reportBatch - 1) / reportBatch
                     : long.MaxValue / reportBatch;
-            SeedsPerBatch = reportBatch;
+            _seedBatchBuffer = new string[
+                (int)Math.Clamp(reportBatch, MotelyGlobals.MaxVectorWidth, MaxFetchChunk)
+            ];
 
             _hashes = (Vector512<double>*)
                 Marshal.AllocHGlobal(sizeof(Vector512<double>) * search._pseudoHashKeyLengthCount);
@@ -1985,18 +2101,23 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
         internal override void SearchProviderBatch()
         {
-            // Batch retrieve seeds in one lock operation - much faster!
-            // Use thread-local buffer to avoid allocations per batch
-            int fetched = SeedProvider.NextSeeds(_seedBatchBuffer);
-
-            // If we got no seeds at all, this thread is exhausted
-            if (fetched == 0)
+            // Refill the local chunk only when it's drained — that's the one provider lock per
+            // chunk. Empty refill = the provider is done for this thread.
+            if (_bufferPos >= _bufferCount)
             {
-                // Mark this thread exhausted so ThreadMain idles it (and we only decrement once)
-                _providerExhausted = true;
-
-                return;
+                _bufferCount = SeedProvider.NextSeeds(_seedBatchBuffer);
+                _bufferPos = 0;
+                if (_bufferCount == 0)
+                {
+                    _providerExhausted = true;
+                    return;
+                }
             }
+
+            // One SIMD pack off the local chunk.
+            int packStart = _bufferPos;
+            int fetched = Math.Min(MotelyGlobals.MaxVectorWidth, _bufferCount - packStart);
+            _bufferPos = packStart + fetched;
 
             // Valid seeds only, packed into dense lanes 0..validCount-1.
             // Motely charset has no '0' — list providers often feed decimal strings ("10", "20")
@@ -2009,7 +2130,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
             for (int seedIdx = 0; seedIdx < fetched; seedIdx++)
             {
-                ReadOnlySpan<char> seed = _seedBatchBuffer[seedIdx].AsSpan();
+                ReadOnlySpan<char> seed = _seedBatchBuffer[packStart + seedIdx].AsSpan();
 
                 if (
                     seed.IsEmpty
@@ -2238,7 +2359,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             _digits = (char*)Marshal.AllocHGlobal(sizeof(char) * MotelyGlobals.MaxSeedLength);
 
             _batchCharCount = settings.SequentialBatchCharacterCount;
-            SeedsPerBatch = (long)Math.Pow(MotelyGlobals.SeedDigits.Length, _batchCharCount);
 
             _nonBatchCharCount = MotelyGlobals.MaxSeedLength - _batchCharCount;
             MaxBatch = (long)Math.Pow(MotelyGlobals.SeedDigits.Length, _nonBatchCharCount);
