@@ -23,6 +23,5 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
     <!-- Same protocol-free language brain the stdio LSP server uses: diagnostics, hover and
          completion come from the engine's own grammar, never a hand-written JS copy. -->
-    <ProjectReference Include="..\Motely.Lsp.Core\Motely.Lsp.Core.csproj" />
   </ItemGroup>
 </Project>
