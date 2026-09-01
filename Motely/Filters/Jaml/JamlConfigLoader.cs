@@ -9,16 +9,21 @@ public static partial class JamlConfigLoader
         string content,
         [NotNullWhen(true)] out JamlConfig? config,
         out string? error
+    ) => TryLoad(content, JamlLoadFormat.Auto, out config, out error);
+
+    public static bool TryLoad(
+        string content,
+        JamlLoadFormat format,
+        [NotNullWhen(true)] out JamlConfig? config,
+        out string? error
     )
     {
         try
         {
-            config = FromJaml(content);
+            config = From(content, format);
             error = null;
             return true;
         }
-        // The span is the only thing that tells a caller *where* the bad key is; flattening
-        // straight to ex.Message threw it away and left every shell printing a bare sentence.
         catch (JamlSemanticException ex) when (!ex.Span.IsEmpty)
         {
             config = null;
@@ -33,11 +38,35 @@ public static partial class JamlConfigLoader
         }
     }
 
-    public static JamlConfig FromJaml(string content)
+    public static bool TryLoadFromJson(
+        string json,
+        [NotNullWhen(true)] out JamlConfig? config,
+        out string? error
+    ) => TryLoad(json, JamlLoadFormat.Json, out config, out error);
+
+    public static bool TryLoadFromYaml(
+        string yaml,
+        [NotNullWhen(true)] out JamlConfig? config,
+        out string? error
+    ) => TryLoad(yaml, JamlLoadFormat.Yaml, out config, out error);
+
+    public static JamlConfig FromJson(string json) => From(json, JamlLoadFormat.Json);
+
+    public static JamlConfig FromYaml(string yaml) => From(yaml, JamlLoadFormat.Yaml);
+
+    public static JamlConfig FromJaml(string content) => From(content, JamlLoadFormat.Jaml);
+
+    public static JamlConfig From(string content, JamlLoadFormat format)
     {
+        var resolved = format == JamlLoadFormat.Auto ? Sniff(content) : format;
         try
         {
-            var root = JamlDocumentParser.ParseJaml(content);
+            JMap root = resolved switch
+            {
+                JamlLoadFormat.Json => JamlForeignTree.ParseJson(content),
+                JamlLoadFormat.Yaml => JamlForeignTree.ParseYaml(content),
+                _ => JamlDocumentParser.ParseJaml(content),
+            };
             return ParseConfig(new NodeReader(root));
         }
         catch (InvalidOperationException)
@@ -46,8 +75,20 @@ public static partial class JamlConfigLoader
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"JAML parse error: {ex.Message}", ex);
+            throw new InvalidOperationException($"{resolved} parse error: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>Leading <c>{</c> is JSON. Everything else is JAML (YAML files use FromYaml / .yaml).</summary>
+    public static JamlLoadFormat Sniff(string content)
+    {
+        foreach (char c in content)
+        {
+            if (char.IsWhiteSpace(c))
+                continue;
+            return c == '{' ? JamlLoadFormat.Json : JamlLoadFormat.Jaml;
+        }
+        return JamlLoadFormat.Jaml;
     }
 
     public static LegendaryJokerSourceConfig CreateLegendaryJokerSources(

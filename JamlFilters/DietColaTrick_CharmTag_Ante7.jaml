@@ -6,13 +6,14 @@ must:
   - tag: CharmTag
     antes: [7]
   - legendaryJoker: Perkeo
-    antes: [1,2,3]
+    antes: [1,2]
   - legendaryJoker: Perkeo
-    antes: [7,8]
-  - spectralCard: Ankh
-    antes: [1,2,3,4]
+    antes: [4,5,6,7,8]
+    rolls: [1]
+  - spectralCard: Ankh and on all check it I mean I can go I think it needs to be turned down it needs to be turned on physically
+    antes: [1,2]
     sources:
-      shopItems: [0,1,2,3,4,5]
+      shopItems: [0, 1,2,3]
 should:
   - jokers: [Blueprint, Brainstorm]
     antes: [2]
@@ -32,7 +33,7 @@ should:
   - legendaryJoker: []
     antes: [8,9,10,11,12,13,14,15]
     score: 2
-  - joker: DietCola
+  - joker: DietCola I have one hundred half a why do not hate me, it's not my fault. I was free. Hello, that's good stuff. How was your past week Ben without me? That's good as I sesting it. Yep, I talked to him this morning about it told him well he was asking what stuff need to be tested. I said to go approve the dependency upgrade since that's not really a test, and then to do this one and to let me know if there's any any way he can get these errors I mean there's a past criteria checkboxes he can go up to so so yeah hopefully that's finally done and then I also am working on the I see you commented on like the emulator stuff so I am hooking that up to and testing it locally but I found there's some that fail if you run it like parallel probably using the same idea or some shit the max item count yeah I think it's because our property names clash with like reserve names so it might be a while before they fix that so okay good to know there's some comments I was reading that are interesting but I don't know I guess this the the grid search are you still requesting changes on that it's a you have requested changes okay the issue links to that okay yes looks like a yup okay hundred cost okay energize by it but are scared other people with real things that really happen I guess I could okay okay I'm doing it right now looks like there's duplicated things okay
     antes: [2, 3, 4, 5,6]
   - legendaryJoker: []
     edition: Negative
@@ -83,85 +84,3 @@ seeds:
   - JFLVOZ71
   - J5MPIH81
   - NYUZVR81
-  - YGV4R211
-  - P2D7I111
-  - LKP3I111
-  - KC11B111
-  - WAF1F111
-  - 1I214111
-  - 3BTTUNTX
-  - YCLODK6T
-  - SLGFOPUS
-  - OPUSRK1H
-  - E2BWOPUS
-  - OPUSB96G
-  - BWFABLEX
-  - 68467TUN
-  - 3QTUNPBC
-  - 7TUNZZYM
-  - TUN2DTUH
-  - TUN56U9Q
-  - TUN7RYLS
-  - 88LVLTUN
-  - 7JTUN72Y
-  - 6NXRCLOD
-  - SP5CLODN
-  - TUN1A1SP
-  - TUN2AFF9
-  - 629TTUN5
-  - 7TUWUTUN
-  - TUN3LMCU
-  - 4TUNJLOB
-  - 1TUN7XFW
-  - 18MTUNXH
-  - 1ITUNZQM
-  - 1OBJ7TUN
-  - 2TUNAFG1
-  - 2VTLTUN9
-  - TUN2YSCV
-  - TUN31NTC
-  - 3TUN1PDZ
-  - 3DTUN548
-  - 4OTUN1MM
-  - 5H3TUN5U
-  - 5KCTUNYD
-  - 5YTUNHI4
-  - 6AZPTUNL
-  - 7TUN9PAW
-  - RBEKXTUN
-  - ATUNET3Y
-  - JOKMKTUN
-  - FY27TUN8
-  - TUNOMPE4
-  - PMDTUTUN
-  - TUNYYDU7
-  - SCSWPTUN
-  - ULTUNWPN
-  - CRTUN6I9
-  - TUNV5VES
-  - VTUNM926
-  - TUN9LDG7
-  - FFX2RTUN
-  - STUNKIV8
-  - AGQOOTUN
-  - BLTUNVJF
-  - JWGTUN86
-  - LPTUNP84
-  - W9TUN8Y3
-  - ELTUNRVT
-  - GVPNTUNW
-  - RITUNN4O
-  - TUNTLFXQ
-  - TVOITUNY
-  - N7TUN3WD
-  - G3ZTUNB4
-  - A9MJTUNJ
-  - CTUNR28N
-  - G1C5TUNI
-  - KLZUTUNH
-  - LTUNQ6VK
-  - LVTUNUEU
-  - TJF9TUN4
-  - TUND5YRC
-  - RKUTUNMI
-  - V1MTUNZ5

@@ -145,8 +145,18 @@ partial class Program
         app.HelpOption("-?|-h|--help");
 
         var jamlOption = app.Option<string>(
-            "--jaml <JAML>",
-            "JAML (Jimbo's Ante Markup Language) config file",
+            "--jaml <PATH>",
+            "JAML config file (terse one-liners allowed)",
+            CommandOptionType.SingleValue
+        );
+        var jsonOption = app.Option<string>(
+            "--json <PATH>",
+            "JSON config file (same filter bag as JAML)",
+            CommandOptionType.SingleValue
+        );
+        var yamlOption = app.Option<string>(
+            "--yaml <PATH>",
+            "YAML 1.2 config file (same filter bag; no JAML terse lines)",
             CommandOptionType.SingleValue
         );
         var analyzeOption = app.Option<string>(
@@ -342,7 +352,9 @@ partial class Program
                 // --replay replays a JAML's seeds: block; there is no such block in native mode.
                 if (replayOption.HasValue() || verifySeedsOption.HasValue())
                 {
-                    Console.Error.WriteLine("Error: --replay/--verify-seeds requires --jaml.");
+                    Console.Error.WriteLine(
+                        "Error: --replay/--verify-seeds requires --jaml, --json, or --yaml."
+                    );
                     return 1;
                 }
 
@@ -461,15 +473,45 @@ partial class Program
             // --jaml mode — the main path: load the filter, build the search, run the passes.
             async Task<int> RunJamlMode()
             {
-                if (!jamlOption.HasValue())
+                int formatFlags =
+                    (jamlOption.HasValue() ? 1 : 0)
+                    + (jsonOption.HasValue() ? 1 : 0)
+                    + (yamlOption.HasValue() ? 1 : 0);
+                if (formatFlags == 0)
                 {
-                    Console.Error.WriteLine("Error: --jaml <path> or --native <name> required.");
+                    Console.Error.WriteLine(
+                        "Error: --jaml <path>, --json <path>, --yaml <path>, or --native <name> required."
+                    );
                     return 1;
+                }
+                if (formatFlags > 1)
+                {
+                    Console.Error.WriteLine("Error: pick one of --jaml, --json, --yaml.");
+                    return 1;
+                }
+
+                string docPath;
+                JamlLoadFormat docFormat;
+                if (jsonOption.HasValue())
+                {
+                    docPath = jsonOption.ParsedValue;
+                    docFormat = JamlLoadFormat.Json;
+                }
+                else if (yamlOption.HasValue())
+                {
+                    docPath = yamlOption.ParsedValue;
+                    docFormat = JamlLoadFormat.Yaml;
+                }
+                else
+                {
+                    docPath = jamlOption.ParsedValue;
+                    docFormat = JamlLoadFormat.Jaml;
                 }
 
                 if (
                     !JamlFileLoader.TryLoadFromPath(
-                        jamlOption.ParsedValue,
+                        docPath,
+                        docFormat,
                         out var config,
                         out var loadError
                     )
@@ -667,7 +709,7 @@ partial class Program
                             SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
                             Drown: drown,
                             Replay: replay,
-                            JamlPath: jamlOption.ParsedValue,
+                            JamlPath: docPath,
                             ResultsRootPath: resultsPathOption.HasValue()
                                 ? resultsPathOption.ParsedValue
                                 : null,
@@ -785,7 +827,7 @@ partial class Program
                 if (!quietOption.HasValue())
                 {
                     Console.Error.WriteLine(
-                        $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| drown=entire seed lake" : replay ? "| replay=JAML seeds: block" : "(sequential only)")}"
+                        $"Motely: {config.Name ?? docPath} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| drown=entire seed lake" : replay ? "| replay=JAML seeds: block" : "(sequential only)")}"
                     );
                 }
 
@@ -900,9 +942,9 @@ partial class Program
                         ? saveSeedsCollector.GetSeeds()
                         : (IReadOnlyList<string>)saveSeedMatches;
 
-                    if (JamlFileLoader.TrySaveSeeds(jamlOption.ParsedValue, seedsToSave, out var saveError))
+                    if (JamlFileLoader.TrySaveSeeds(docPath, seedsToSave, out var saveError))
                         Console.Error.WriteLine(
-                            $"Saved {seedsToSave.Count:N0} seed(s) into top-level seeds: in {jamlOption.ParsedValue}"
+                            $"Saved {seedsToSave.Count:N0} seed(s) into top-level seeds: in {docPath}"
                         );
                     else
                         Console.Error.WriteLine(

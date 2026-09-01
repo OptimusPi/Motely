@@ -12,6 +12,8 @@
   <ItemGroup>
     <ProjectReference Include="../Motely/Motely.csproj" />
     <ProjectReference Include="../Motely.DataLake/Motely.DataLake.csproj" />
+    <ProjectReference Include="../Motely.Lsp.Core/Motely.Lsp.Core.csproj" />
+    <ProjectReference Include="../Motely.Lsp/Motely.Lsp.csproj" />
     <!-- AppHostModelTests: the Aspire composition, built (not started) in-process. -->
     <ProjectReference Include="../Motely.AppHost/Motely.AppHost.csproj" />
   </ItemGroup>

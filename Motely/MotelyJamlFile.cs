@@ -24,6 +24,9 @@ public static class MotelyJamlFile
     /// <summary>The conventional folder bare filter names live in.</summary>
     public const string FiltersDirectory = "JamlFilters";
 
+    /// <summary>JAML, JSON, YAML — same config bag once loaded.</summary>
+    public static readonly string[] DocumentExtensions = [".jaml", ".json", ".yaml", ".yml"];
+
     /// <summary>
     /// Resolve a user-typed value to an existing file path, or <c>null</c> if none of the candidate
     /// locations exist. Pure lookup — no IO beyond <see cref="File.Exists"/>.
@@ -40,9 +43,12 @@ public static class MotelyJamlFile
 
         if (!Path.HasExtension(path))
         {
-            var withExt = path + ".jaml";
-            if (File.Exists(withExt))
-                return withExt;
+            foreach (var ext in DocumentExtensions)
+            {
+                var withExt = path + ext;
+                if (File.Exists(withExt))
+                    return withExt;
+            }
         }
 
         if (!Path.IsPathRooted(path))
@@ -53,9 +59,12 @@ public static class MotelyJamlFile
 
             if (!Path.HasExtension(path))
             {
-                var inFiltersExt = Path.Combine(FiltersDirectory, path + ".jaml");
-                if (File.Exists(inFiltersExt))
-                    return inFiltersExt;
+                foreach (var ext in DocumentExtensions)
+                {
+                    var inFiltersExt = Path.Combine(FiltersDirectory, path + ext);
+                    if (File.Exists(inFiltersExt))
+                        return inFiltersExt;
+                }
             }
         }
 
@@ -111,7 +120,51 @@ public static class MotelyJamlFile
             return false;
         }
 
-        if (JamlConfigLoader.TryLoad(content, out config, out error))
+        if (JamlConfigLoader.TryLoad(content, FormatFromPath(resolved), out config, out error))
+            return true;
+
+        error = $"{resolved}: {error}";
+        return false;
+    }
+
+    public static JamlLoadFormat FormatFromPath(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".json" => JamlLoadFormat.Json,
+            ".yaml" or ".yml" => JamlLoadFormat.Yaml,
+            _ => JamlLoadFormat.Jaml,
+        };
+
+    public static bool TryLoad(
+        string? path,
+        JamlLoadFormat format,
+        [NotNullWhen(true)] out JamlConfig? config,
+        out string? error
+    )
+    {
+        config = null;
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            error = "No filter path provided.";
+            return false;
+        }
+
+        var resolved = ResolvePath(path);
+
+        string content;
+        try
+        {
+            content = File.ReadAllText(resolved);
+        }
+        catch (System.Exception ex)
+        {
+            error = $"Error reading '{resolved}': {ex.Message}";
+            return false;
+        }
+
+        var use = format == JamlLoadFormat.Auto ? FormatFromPath(resolved) : format;
+        if (JamlConfigLoader.TryLoad(content, use, out config, out error))
             return true;
 
         error = $"{resolved}: {error}";
