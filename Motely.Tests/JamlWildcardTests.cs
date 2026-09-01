@@ -23,6 +23,20 @@ public sealed class JamlWildcardTests
     }
 
     [Fact]
+    public void BareJokerKey_IsCategoryAny()
+    {
+        const string jaml = """
+            name: bare-any
+            deck: Red
+            stake: White
+            must:
+              - joker:
+            """;
+        Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+        Assert.Empty(Assert.IsType<JokerClause>(config!.Must[0]).Jokers);
+    }
+
+    [Fact]
     public void EmptyJoker_WithEditionOnly_IsAnyNegativeJoker()
     {
         var jaml = """

@@ -218,8 +218,8 @@ public static partial class JamlConfigLoader
         where TEnum : struct, Enum
     {
         var mapping = new JMap();
-        // Empty jokers = category any → write empty array (no "Any" token).
-        mapping.Set(discriminator, EnumArrayNode(jokers), default);
+        // Empty jokers = category any → `joker:` (empty scalar), not `joker: []`.
+        mapping.Set(discriminator, DiscValueNode(jokers), default);
         WriteCommonKeys(mapping, clause);
         WriteAntes(mapping, clause);
         if (edition is { } ed)
@@ -234,11 +234,7 @@ public static partial class JamlConfigLoader
     private static JMap WriteLegendary(LegendaryJokerClause c)
     {
         var mapping = new JMap();
-        mapping.Set(
-            "legendaryJoker",
-            EnumArrayNode(c.Jokers),
-            default
-        );
+        mapping.Set("legendaryJoker", DiscValueNode(c.Jokers), default);
         WriteCommonKeys(mapping, c);
         WriteAntes(mapping, c);
         if (c.Edition is { } ed)
@@ -262,7 +258,7 @@ public static partial class JamlConfigLoader
         where TEnum : struct, Enum
     {
         var mapping = new JMap();
-        mapping.Set(discriminator, EnumArrayNode(items), default);
+        mapping.Set(discriminator, DiscValueNode(items), default);
         WriteCommonKeys(mapping, clause);
         WriteAntes(mapping, clause);
         if (rolls is { } r && (rollsDefault is null || !r.SequenceEqual(rollsDefault)))
@@ -279,11 +275,7 @@ public static partial class JamlConfigLoader
         where TEnum : struct, Enum
     {
         var mapping = new JMap();
-        mapping.Set(
-            discriminator,
-            EnumArrayNode(items),
-            default
-        );
+        mapping.Set(discriminator, DiscValueNode(items), default);
         WriteCommonKeys(mapping, clause);
         WriteAntes(mapping, clause);
         var sourcesNode = sources switch
@@ -504,6 +496,10 @@ public static partial class JamlConfigLoader
         if (values.Length > 0)
             mapping.Set(key, IntArrayNode(values), default);
     }
+
+    private static JNode DiscValueNode<TEnum>(TEnum[] values)
+        where TEnum : struct, Enum =>
+        values.Length == 0 ? new JScalar("") : EnumArrayNode(values);
 
     private static JSeq EnumArrayNode<TEnum>(IEnumerable<TEnum> values)
         where TEnum : struct, Enum

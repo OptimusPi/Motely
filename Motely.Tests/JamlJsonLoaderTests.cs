@@ -42,6 +42,27 @@ public class JamlJsonLoaderTests
     }
 
     [Fact]
+    public void FromJson_NullJoker_IsCategoryAny()
+    {
+        var config = JamlConfigLoader.FromJson(
+            """{ "must": [{ "joker": null }] }"""
+        );
+        Assert.Empty(Assert.IsType<JokerClause>(Assert.Single(config.Must)).Jokers);
+    }
+
+    [Fact]
+    public void FromYaml_BareJoker_IsCategoryAny()
+    {
+        var config = JamlConfigLoader.FromYaml(
+            """
+            must:
+              - joker:
+            """
+        );
+        Assert.Empty(Assert.IsType<JokerClause>(Assert.Single(config.Must)).Jokers);
+    }
+
+    [Fact]
     public void FromYaml_HappyPath_MatchesJson()
     {
         var fromYaml = JamlConfigLoader.FromYaml(

@@ -473,7 +473,7 @@ public static class JamlLanguageService
     private static IReadOnlyList<JamlCompletionItem> CompleteValue(
         string[] lines, int line, string key, string valuePrefix, JamlSpan replace)
     {
-        // Discriminator value: enum names only. Category any is empty disc (`joker: []`), not a token.
+        // Discriminator value: enum names only. Category any is an empty disc (`joker:`), not `[]` and not a token.
         if (IsDiscriminator(key) && JamlSchema.ValueEnumTypeFor(key) is { } valueEnum)
         {
             var names = Enum.GetNames(valueEnum).ToList();

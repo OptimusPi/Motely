@@ -2,7 +2,7 @@ name: always-pass-yaml
 deck: Red
 stake: White
 must:
-  - joker: []
+  - joker:
 should:
-  - joker: []
+  - joker:
     score: 1
