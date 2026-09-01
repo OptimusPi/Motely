@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <IsPackable>false</IsPackable>
+    <RunSettingsFilePath>../coverage.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Motely/Motely.csproj" />
+    <ProjectReference Include="../Motely.DataLake/Motely.DataLake.csproj" />
+    <!-- AppHostModelTests: the Aspire composition, built (not started) in-process. -->
+    <ProjectReference Include="../Motely.AppHost/Motely.AppHost.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Verify.Xunit" />
+    <PackageReference Include="Verify.DiffPlex" />
+    <PackageReference Include="Aspire.Hosting.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Motely.Enums" />
+  </ItemGroup>
+
+  <!-- JimmolateScoringOrderTests.cs does not exist in the tree; it referenced a run-state API
+       (NewRunState / GetBossForAnteWithState) that was never wired up. The exclusion stays only so
+       a future restore of that file doesn't silently break the build. JimmolateFilterTests.cs is
+       compiled and running. -->
+  <ItemGroup>
+    <Compile Remove="JimmolateScoringOrderTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="seeds/*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Golden JAML files travel to the test output so data-driven tests can load them by name. -->
+    <None Update="GoldenJamlFiles/*.jaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
