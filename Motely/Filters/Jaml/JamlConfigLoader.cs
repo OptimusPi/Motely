@@ -559,8 +559,7 @@ public static partial class JamlConfigLoader
             ? (MotelyLuck)value
             : throw new JamlSemanticException($"Unsupported luck multiplier: {value}.", span);
 
-    private static bool IsAny(string value) =>
-        string.Equals(value, "any", StringComparison.OrdinalIgnoreCase);
+    private static bool IsAny(string value) => JamlDisc.IsAnyToken(value);
 
     private static string Normalize(string value) =>
         value

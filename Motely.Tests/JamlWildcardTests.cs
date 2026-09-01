@@ -55,18 +55,18 @@ public sealed class JamlWildcardTests
     }
 
     [Fact]
-    public void TokenAny_IsRejectedAsEnumNotWildcard()
+    public void TokenAny_IsCategoryAny()
     {
         var jaml = """
-            name: token-any-rejected
+            name: token-any
             deck: Red
             stake: White
             must:
               - joker: Any
                 antes: [1]
             """;
-        Assert.False(JamlConfigLoader.TryLoad(jaml, out _, out var error));
-        Assert.Contains("Any", error, StringComparison.OrdinalIgnoreCase);
+        Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+        Assert.Empty(Assert.IsType<JokerClause>(config!.Must[0]).Jokers);
     }
 
     [Fact]

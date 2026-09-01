@@ -23,7 +23,7 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
 
     public string Text => _text;
     public JamlSpan Span { get; }
-    public bool IsAny => string.Equals(_text, "any", StringComparison.OrdinalIgnoreCase);
+    public bool IsAny => JamlDisc.IsAnyToken(_text);
 
     public static JamlLoaderValueReader FromScalar(string? text, JamlSpan span = default) =>
         new(text ?? "", null, false, span);
@@ -128,16 +128,27 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
     {
         var parts = _hasArray && _array is { Length: > 0 }
             ? _array
-            : (string.IsNullOrWhiteSpace(_text) ? null : new[] { _text });
-        if (parts is null)
+            : (JamlDisc.IsAnyToken(_text) ? null : new[] { _text });
+        if (parts is null || parts.Length == 0)
         {
             value = [];
-            return false;
+            return true;
+        }
+
+        if (parts.Length == 1 && JamlDisc.IsAnyToken(parts[0]))
+        {
+            value = [];
+            return true;
         }
 
         value = new TEnum[parts.Length];
         for (int i = 0; i < parts.Length; i++)
         {
+            if (JamlDisc.IsAnyToken(parts[i]))
+                throw new JamlSemanticException(
+                    "'Any' is the whole category, not a list member.",
+                    Span
+                );
             if (typeof(TEnum) == typeof(MotelyStandardcardRank))
                 value[i] = (TEnum)(object)JamlConfigLoader.ParseRank(parts[i], Span);
             else

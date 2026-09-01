@@ -132,11 +132,24 @@ public static partial class JamlConfigLoader
 
         public bool TryEnumArray<TEnum>(out TEnum[] value) where TEnum : struct, Enum
         {
-            var names = reader.GetStringArray(key)
-                ?? throw new JamlSemanticException($"'{key}' requires a value.", Span);
+            var names = reader.GetStringArray(key) ?? [];
+            if (names.Length == 0
+                || (names.Length == 1 && JamlDisc.IsAnyToken(names[0])))
+            {
+                value = [];
+                return true;
+            }
+
             var parsed = new TEnum[names.Length];
             for (int i = 0; i < names.Length; i++)
+            {
+                if (JamlDisc.IsAnyToken(names[i]))
+                    throw new JamlSemanticException(
+                        "'Any' is the whole category, not a list member.",
+                        Span
+                    );
                 parsed[i] = ParsePositioned<TEnum>(names[i]);
+            }
             value = parsed;
             return true;
         }

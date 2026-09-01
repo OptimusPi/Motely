@@ -63,6 +63,35 @@ public class JamlJsonLoaderTests
     }
 
     [Fact]
+    public void FromYaml_FoldedParagraph_LandsOnDescription()
+    {
+        var config = JamlConfigLoader.FromYaml(
+            """
+            name: folded
+            description: >
+              hello
+              world
+            must:
+              - joker: Any
+            """
+        );
+        Assert.Equal("hello world\n", config.Description);
+        Assert.Empty(Assert.IsType<JokerClause>(Assert.Single(config.Must)).Jokers);
+    }
+
+    [Fact]
+    public void FromYaml_AnyKeyword_IsCategoryAny()
+    {
+        var config = JamlConfigLoader.FromYaml(
+            """
+            must:
+              - joker: Any
+            """
+        );
+        Assert.Empty(Assert.IsType<JokerClause>(Assert.Single(config.Must)).Jokers);
+    }
+
+    [Fact]
     public void FromYaml_HappyPath_MatchesJson()
     {
         var fromYaml = JamlConfigLoader.FromYaml(

@@ -1,0 +1,5 @@
+name: any-keyword
+deck: Red
+stake: White
+must:
+  - joker: Any

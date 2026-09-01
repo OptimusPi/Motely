@@ -9,8 +9,7 @@ must:
     antes: [1,2]
   - legendaryJoker: Perkeo
     antes: [4,5,6,7,8]
-    rolls: [1]
-  - spectralCard: Ankh and on all check it I mean I can go I think it needs to be turned down it needs to be turned on physically
+  - spectralCard: Ankh
     antes: [1,2]
     sources:
       shopItems: [0, 1,2,3]
@@ -33,7 +32,7 @@ should:
   - legendaryJoker: []
     antes: [8,9,10,11,12,13,14,15]
     score: 2
-  - joker: DietCola I have one hundred half a why do not hate me, it's not my fault. I was free. Hello, that's good stuff. How was your past week Ben without me? That's good as I sesting it. Yep, I talked to him this morning about it told him well he was asking what stuff need to be tested. I said to go approve the dependency upgrade since that's not really a test, and then to do this one and to let me know if there's any any way he can get these errors I mean there's a past criteria checkboxes he can go up to so so yeah hopefully that's finally done and then I also am working on the I see you commented on like the emulator stuff so I am hooking that up to and testing it locally but I found there's some that fail if you run it like parallel probably using the same idea or some shit the max item count yeah I think it's because our property names clash with like reserve names so it might be a while before they fix that so okay good to know there's some comments I was reading that are interesting but I don't know I guess this the the grid search are you still requesting changes on that it's a you have requested changes okay the issue links to that okay yes looks like a yup okay hundred cost okay energize by it but are scared other people with real things that really happen I guess I could okay okay I'm doing it right now looks like there's duplicated things okay
+  - joker: DietCola
     antes: [2, 3, 4, 5,6]
   - legendaryJoker: []
     edition: Negative

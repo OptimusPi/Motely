@@ -1,15 +1,13 @@
-using System.Collections;
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using VYaml.Serialization;
+using VYaml.Parser;
 
 namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// JSON / YAML → the existing <see cref="JMap"/> tree. One ParseConfig after that.
-/// JAML terse lines stay on <see cref="JamlDocumentParser"/>.
+/// No <c>dynamic</c>, no Activator. JAML terse lines stay on <see cref="JamlDocumentParser"/>.
 /// </summary>
 internal static class JamlForeignTree
 {
@@ -30,17 +28,23 @@ internal static class JamlForeignTree
 
     public static JMap ParseYaml(string text)
     {
-        object? root;
         try
         {
-            root = YamlSerializer.Deserialize<dynamic>(Encoding.UTF8.GetBytes(text));
+            var parser = YamlParser.FromBytes(Encoding.UTF8.GetBytes(text));
+            parser.SkipAfter(ParseEventType.DocumentStart);
+            if (parser.End
+                || parser.CurrentEventType is ParseEventType.DocumentEnd or ParseEventType.StreamEnd)
+                return new JMap();
+            return AsMap(ReadYaml(ref parser), "YAML");
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException($"YAML parse error: {ex.Message}", ex);
         }
-
-        return AsMap(FromObject(root), "YAML");
     }
 
     private static JMap AsMap(JNode node, string kind) =>
@@ -67,29 +71,50 @@ internal static class JamlForeignTree
             _ => new JScalar(""),
         };
 
-    private static JNode FromObject(object? value) =>
-        value switch
+    private static JNode ReadYaml(ref YamlParser parser) =>
+        parser.CurrentEventType switch
         {
-            null => new JScalar(""),
-            JNode node => node,
-            string s => new JScalar(s),
-            bool b => JScalar.Of(b),
-            IDictionary dict => MapFrom(Pairs(dict)),
-            IEnumerable list and not string => SeqFrom(list.Cast<object?>().Select(FromObject)),
-            IFormattable n => new JScalar(
-                n.ToString(null, CultureInfo.InvariantCulture) ?? "",
-                JScalarKind.Bare
+            ParseEventType.Scalar => new JScalar(
+                parser.GetScalarAsString() ?? "",
+                parser.TryGetScalarAsInt32(out _) ? JScalarKind.Integer : JScalarKind.Bare
             ),
-            _ => new JScalar(value.ToString() ?? ""),
+            ParseEventType.MappingStart => ReadYamlMap(ref parser),
+            ParseEventType.SequenceStart => ReadYamlSeq(ref parser),
+            ParseEventType.Alias => throw new InvalidOperationException(
+                "YAML aliases are not supported."
+            ),
+            _ => throw new InvalidOperationException(
+                $"Unexpected YAML event {parser.CurrentEventType}."
+            ),
         };
 
-    private static IEnumerable<(string Key, JNode Value)> Pairs(IDictionary dict)
+    private static JMap ReadYamlMap(ref YamlParser parser)
     {
-        foreach (var key in dict.Keys)
+        var map = new JMap();
+        parser.Read();
+        while (!parser.End && parser.CurrentEventType != ParseEventType.MappingEnd)
         {
-            object lookup = key ?? "";
-            yield return (key?.ToString() ?? "", FromObject(dict[lookup]));
+            if (parser.CurrentEventType != ParseEventType.Scalar)
+                throw new InvalidOperationException("YAML mapping key must be a scalar.");
+            string key = parser.GetScalarAsString() ?? "";
+            if (!parser.Read())
+                throw new InvalidOperationException($"YAML mapping '{key}' is missing a value.");
+            map.Set(key, ReadYaml(ref parser), default);
+            parser.Read();
         }
+        return map;
+    }
+
+    private static JSeq ReadYamlSeq(ref YamlParser parser)
+    {
+        var seq = new JSeq();
+        parser.Read();
+        while (!parser.End && parser.CurrentEventType != ParseEventType.SequenceEnd)
+        {
+            seq.Items.Add(ReadYaml(ref parser));
+            parser.Read();
+        }
+        return seq;
     }
 
     private static JMap MapFrom(IEnumerable<(string Key, JNode Value)> pairs)
