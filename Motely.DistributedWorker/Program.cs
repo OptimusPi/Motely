@@ -150,7 +150,8 @@ class Program
                 .WithBatchCharacterCount(lease.BatchChars)
                 .WithStartBatchIndex(lease.StartBlock)
                 .WithEndBatchIndex(lease.StartBlock + lease.BlockCount)
-                .WithSequentialSearch();
+                .WithSequentialSearch()
+                .WithBatchBoundaryCallback(() => lake?.Flush());
             if (plan.ScoreTallyColumnCount > 0)
                 settings = settings.WithScoredResultCallback(t =>
                 {

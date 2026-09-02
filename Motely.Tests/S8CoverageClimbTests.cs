@@ -330,6 +330,8 @@ public sealed class S8CoverageClimbTests
 
         public void OnSeed(string seed) => Seeds.Add(seed);
 
+        public void Flush() { }
+
         public void OnScored(in MotelyScoredSeedResult tally)
         {
             Seeds.Add(tally.Seed);
@@ -350,6 +352,7 @@ public sealed class S8CoverageClimbTests
             var scored = new MotelyScoredSeedResult();
             scored.Reset("SEED2", 42);
             composite.OnScored(in scored);
+            composite.Flush();
         }
         Assert.Equal(["SEED1", "SEED2"], a.Seeds);
         Assert.Equal(["SEED1", "SEED2"], b.Seeds);

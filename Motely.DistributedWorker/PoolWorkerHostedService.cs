@@ -93,10 +93,10 @@ public sealed class PoolWorkerHostedService : BackgroundService
                     .WithSequentialSearch();
 
                 // ── Local seed lake ──────────────────────────────────────
-                // Every find streams into the shared lake under the pool's filter id as it is
-                // found — on disk whether or not the submit below ever succeeds.
+                // Finds buffer in in-memory DuckDB and flush to the lake at each search batch.
                 using var lake = localDbDir is null ? null
                     : new SeedLakeSink(localDbDir, claim.FilterId, plan.ScoreTallyColumnCount > 0 ? plan.TallyLabels : null);
+                settings = settings.WithBatchBoundaryCallback(() => lake?.Flush());
 
                 if (plan.ScoreTallyColumnCount > 0)
                     settings = settings.WithScoredResultCallback(tally =>

@@ -352,10 +352,9 @@ public class SearchWindow : Window
 
             Application.Invoke(() => EnsureTallyColumns(scoreTallyColumns));
 
-            // Durability + save-back in one place (same spine as Motely.CLI). Every accepted seed
-            // reaches the seed lake immediately — a crash or a Stop mid-sweep never discards what is
-            // already on screen — and the top seeds are merged into the JAML seeds: block when the
-            // run ends. The lake root falls back to the configured DataLakePath so a search always
+            // Durability + save-back in one place (same spine as Motely.CLI). Finds buffer in
+            // in-memory DuckDB and flush to the lake at each search batch boundary (and Dispose).
+            // The lake root falls back to the configured DataLakePath so a search always
             // persists, even when no explicit sink was passed (this was the TUI data-loss bug).
             string lakeRoot = _sink
                 ?? (string.IsNullOrWhiteSpace(TuiSettings.DataLakePath) ? null : TuiSettings.DataLakePath)
@@ -381,6 +380,7 @@ public class SearchWindow : Window
                     Application.Invoke(() => AppendRow(resultCount, seed, score, tallyValues));
                 };
                 settings.WithScoredResultCallback(tally => persistence.OnScored(in tally));
+                settings.WithBatchBoundaryCallback(persistence.Flush);
             }
             else
             {
@@ -390,6 +390,7 @@ public class SearchWindow : Window
                     Application.Invoke(() => AppendRow(resultCount, seed, 0, System.Array.Empty<int>()));
                 };
                 settings.WithSeedMatchCallback(seed => persistence.OnSeed(seed));
+                settings.WithBatchBoundaryCallback(persistence.Flush);
             }
 
             Application.Invoke(() =>

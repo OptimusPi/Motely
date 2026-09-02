@@ -8,8 +8,8 @@ namespace Motely.DataLake;
 /// front-end previously wired up by hand (and the TUI mostly forgot to):
 ///
 ///   1. the <see cref="MotelyScoreCutoff"/> gate (auto / fixed / off), applied before anything is kept;
-///   2. immediate durability — every surviving seed is written to the per-filter seed lake as it is
-///      found, so a crash or a stop mid-sweep never discards results already on screen;
+///   2. durability at the search batch boundary — surviving seeds buffer in in-memory DuckDB
+///      and <see cref="Flush"/> to the lake when a batch ends (and on Dispose);
 ///   3. save-back — on completion or stop, the top seeds are merged into the JAML <c>seeds:</c>
 ///      block on disk (bounded top-N by score for scored filters; every match for match-only filters).
 ///
@@ -130,6 +130,9 @@ public sealed class JamlSeedPersistence : System.IDisposable
     /// </summary>
     public bool SaveBack(string jamlPath, out string? error) =>
         MotelyJamlFile.TrySaveSeeds(jamlPath, SeedsToSave(), out error);
+
+    /// <summary>Push buffered finds to the lake. Search batch boundary.</summary>
+    public void Flush() => _lake.Flush();
 
     public void Dispose() => _lake.Dispose();
 }

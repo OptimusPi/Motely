@@ -6,6 +6,8 @@ public interface IMotelyResultSink : IDisposable
 {
     void OnSeed(string seed);
     void OnScored(in MotelyScoredSeedResult tally);
+    /// <summary>Push buffered finds to disk. Search batch boundary, not per find.</summary>
+    void Flush();
 }
 
 public sealed class CompositeMotelyResultSink : IMotelyResultSink
@@ -27,6 +29,12 @@ public sealed class CompositeMotelyResultSink : IMotelyResultSink
     {
         for (int i = 0; i < sinks.Length; i++)
             sinks[i].OnScored(in tally);
+    }
+
+    public void Flush()
+    {
+        for (int i = 0; i < sinks.Length; i++)
+            sinks[i].Flush();
     }
 
     public void Dispose()

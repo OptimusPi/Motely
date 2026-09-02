@@ -6,7 +6,7 @@ namespace Motely.DataLake;
 
 public sealed class DuckDbResultsSeedProvider : IMotelySeedProvider, IDisposable
 {
-    public const int DefaultChunkSize = 1225;
+    public const int DefaultChunkSize = MotelyGlobals.DefaultProviderBatchSeedCount;
     private const string CsvReadOptions = "auto_detect = false, header = true, delim = ',', strict_mode = false, null_padding = true, ignore_errors = true";
 
     private readonly object _gate = new();

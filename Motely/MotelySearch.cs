@@ -165,6 +165,11 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelyScoredSeedResult> callback);
+    /// <summary>
+    /// Fired after each search report batch (provider chew or sequential space partition).
+    /// Persist sinks flush here — not per find, not on a timer.
+    /// </summary>
+    IMotelySearchSettings WithBatchBoundaryCallback(Action callback);
     IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
     IMotelySearchSettings StopAfter(long matchCount);
 
@@ -266,6 +271,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// Callback invoked for scored result rows so callers can persist structured results.
     /// </summary>
     public Action<MotelyScoredSeedResult>? ScoredResultCallback { get; set; }
+
+    /// <summary>See <see cref="IMotelySearchSettings.WithBatchBoundaryCallback"/>.</summary>
+    public Action? BatchBoundaryCallback { get; set; }
 
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
@@ -470,6 +478,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         Action<MotelyScoredSeedResult> callback
     ) => WithScoredResultCallback(callback);
 
+    IMotelySearchSettings IMotelySearchSettings.WithBatchBoundaryCallback(Action callback) =>
+        WithBatchBoundaryCallback(callback);
+
     IMotelySearchSettings IMotelySearchSettings.WithAutoScoreCutoff(bool enabled) =>
         WithAutoScoreCutoff(enabled);
 
@@ -534,6 +545,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     )
     {
         ScoredResultCallback = callback;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithBatchBoundaryCallback(Action callback)
+    {
+        BatchBoundaryCallback = callback;
         return this;
     }
 
@@ -809,6 +826,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
     private readonly Action<MotelyScoredSeedResult>? _scoredResultCallback;
+    private readonly Action? _batchBoundaryCallback;
     private readonly bool _autoScoreCutoff;
     private readonly long _progressReportIntervalMs;
     /// <summary>Provider-mode: seeds to chew per report batch (SIMD still 8-wide).</summary>
@@ -826,6 +844,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         _progressReportIntervalMs = settings.ProgressReportIntervalMs;
         _seedMatchCallback = settings.SeedMatchCallback;
         _scoredResultCallback = settings.ScoredResultCallback;
+        _batchBoundaryCallback = settings.BatchBoundaryCallback;
         _autoScoreCutoff = settings.AutoScoreCutoff;
         _stopAfterMatches = settings.StopAfterMatches;
         _providerBatchSeedCount = Math.Max(
@@ -1143,6 +1162,9 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     {
         _completionSource.Task.GetAwaiter().GetResult();
     }
+
+    /// <summary>Disk for persist sinks: one flush per search batch, not per find.</summary>
+    private void NotifyBatchBoundary() => _batchBoundaryCallback?.Invoke();
 
     /// <summary>After each batch: fire the progress callback with <see cref="MotelyProgress"/> (callers format strings).</summary>
     private void PrintReport()
@@ -1509,6 +1531,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             if (Search._autoScoreCutoff)
                 UpdateAutoCutoffGate();
 
+            Search.NotifyBatchBoundary();
             // Report progress
             Search.PrintReport();
 
@@ -1571,6 +1594,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             if (Search._autoScoreCutoff)
                 UpdateAutoCutoffGate();
 
+            Search.NotifyBatchBoundary();
             // Always report after a non-empty chew — including the drain batch — so progress
             // can hit 100% on short lists and StopAfter races still see a final tick.
             Search.PrintReport();
@@ -2058,7 +2082,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         private readonly string[] _seedBatchBuffer;
         private int _bufferCount;
         private int _bufferPos;
-        private const int MaxFetchChunk = 4096;
+        private const int MaxFetchChunk = MotelyGlobals.DefaultProviderBatchSeedCount;
 
         public MotelyProviderSearchPlan(
             MotelySearch<TBaseFilter> search,

@@ -787,13 +787,14 @@ partial class Program
                     .WithProgressCallback(
                         quietOption.HasValue() ? CaptureProgress : WriteProgressLineToStderr
                     )
+                    .WithBatchBoundaryCallback(persistSink.Flush)
                     .WithAutoScoreCutoff(cutoff.IsAuto);
 
                 if (hasStructuredScores)
                 {
                     settings = settings.WithScoredResultCallback(tally =>
                     {
-                        // Disk first, always — before any cutoff test can drop the row.
+                        // Buffer first; DuckLake/CSV hit disk at the search batch boundary.
                         persistSink.OnScored(in tally);
 
                         if (!cutoff.ShouldEmit(tally.Score))

@@ -5,9 +5,8 @@ namespace Motely.DataLake;
 /// <summary>
 /// The scored results file: a per-filter CSV with the full row — seed, score, and every tally
 /// column — appended live as each match is found. This is what a search actually needs to
-/// hand you a shareable results file: <see cref="SeedLakeSink"/> next to it only ever stores
-/// bare seed strings, so it can't reproduce this. No more copying rows out of a scrolling
-/// terminal by hand.
+/// hand you a shareable results file. Lines buffer in the <see cref="StreamWriter"/> and
+/// hit disk at <see cref="Flush"/> (search batch boundary) and Dispose — not per find.
 /// </summary>
 public sealed class ScoredResultsCsvSink : IMotelyResultSink
 {
@@ -63,12 +62,22 @@ public sealed class ScoredResultsCsvSink : IMotelyResultSink
                 // A pre-existing file (resumed run, prior crash) keeps its header — only a
                 // brand-new file gets one written.
                 bool writeHeader = !File.Exists(_path) || new FileInfo(_path).Length == 0;
-                _writer = new StreamWriter(_path, append: true) { AutoFlush = true };
+                _writer = new StreamWriter(_path, append: true) { AutoFlush = false };
                 if (writeHeader)
                     _writer.WriteLine($"Seed,Score,{string.Join(",", _tallyLabels)}");
             }
 
             _writer.WriteLine(line);
+        }
+    }
+
+    public void Flush()
+    {
+        lock (_gate)
+        {
+            if (_disposed)
+                return;
+            _writer?.Flush();
         }
     }
 

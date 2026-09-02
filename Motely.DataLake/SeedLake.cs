@@ -2,6 +2,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.Text;
 using DuckDB.NET.Data;
+using Motely;
 
 namespace Motely.DataLake;
 
@@ -22,10 +23,11 @@ namespace Motely.DataLake;
 ///
 /// DuckLake has no constraints, so uniqueness is the writer's job: each instance skips seeds it has
 /// already written for a filter (seeded from the catalog on first use) and every reader selects
-/// DISTINCT. Writes are buffered and flushed as one transaction per batch (<see cref="FlushRows"/> rows
-/// or <see cref="FlushInterval"/>, whichever first, and on Dispose) — a commit per find would be a catalog
-/// transaction per find. A flush that keeps failing never drops rows: they stay buffered and, as a last
-/// resort, spill to a CSV beside the data.
+/// DISTINCT. The connection is <c>:memory:</c>; DuckLake/SQLite is the durability snapshot.
+/// Finds stay in the in-memory buffer and hit disk only at an explicit <see cref="Flush"/>
+/// (search batch boundary) or <see cref="Dispose"/>. A commit per find — or a 250ms timer —
+/// is a catalog transaction per find and saturates the NVMe. A flush that keeps failing never
+/// drops rows: they stay buffered and, as a last resort, spill to a CSV beside the data.
 /// </summary>
 public sealed class SeedLake : IDisposable
 {
@@ -35,10 +37,11 @@ public sealed class SeedLake : IDisposable
 
     /// <summary>Inserts at or below this many rows live in the catalog instead of a new Parquet file.</summary>
     public const int InliningRowLimit = 4096;
-    /// <summary>Buffered rows that trigger a flush on the writing thread.</summary>
-    public const int FlushRows = 512;
-    /// <summary>The longest a find waits in memory before the timer flushes it.</summary>
-    public static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(250);
+    /// <summary>
+    /// RAM safety only: if a single batch yields this many finds before the search calls
+    /// <see cref="Flush"/>, spill them. Matches one provider report batch. Not a timer.
+    /// </summary>
+    public const int FlushRows = MotelyGlobals.DefaultProviderBatchSeedCount;
 
     private const int MaxRetries = 8;
     private const int SpillAfterRows = 100_000;
@@ -48,7 +51,6 @@ public sealed class SeedLake : IDisposable
     private readonly object _gate = new();
     private readonly List<Row> _buffer = new();
     private readonly Dictionary<string, HashSet<string>> _seen = new(StringComparer.Ordinal);
-    private readonly Timer _timer;
     private long _written;
     private int _flushFailures;
     private bool _disposed;
@@ -114,7 +116,6 @@ public sealed class SeedLake : IDisposable
             _connection.Dispose();
             throw;
         }
-        _timer = new Timer(_ => TimerFlush(), null, FlushInterval, FlushInterval);
     }
 
     /// <summary>Attach the lake into <paramref name="connection"/> as catalog <c>lake</c>. Two
@@ -166,8 +167,8 @@ public sealed class SeedLake : IDisposable
         }
     }
 
-    /// <summary>Queue one find. Thread-safe; returns once the row is buffered (or flushed, when the
-    /// buffer is full). Seeds already in the lake for this filter are skipped.</summary>
+    /// <summary>Queue one find in memory. Disk happens at <see cref="Flush"/> / Dispose.
+    /// Seeds already in the lake for this filter are skipped.</summary>
     public void Write(string filterId, string seed, int? score, ReadOnlySpan<int> tallies)
     {
         if (string.IsNullOrEmpty(seed))
@@ -181,6 +182,7 @@ public sealed class SeedLake : IDisposable
             if (!SeenFor(filterId).Add(seed))
                 return;
             _buffer.Add(new Row(filterId, seed, score, tallies.IsEmpty ? null : tallies.ToArray()));
+            // RAM safety only — a dense batch that never calls Flush still must not grow forever.
             if (_buffer.Count >= FlushRows)
                 FlushOrKeep();
         }
@@ -222,16 +224,6 @@ public sealed class SeedLake : IDisposable
             set.Add(reader.GetString(0));
         _seen[filterId] = set;
         return set;
-    }
-
-    private void TimerFlush()
-    {
-        lock (_gate)
-        {
-            if (_disposed)
-                return;
-            FlushOrKeep();
-        }
     }
 
     /// <summary>Flush; on failure keep the rows for the next attempt (spilling to CSV once the buffer
@@ -501,7 +493,6 @@ public sealed class SeedLake : IDisposable
             if (_disposed)
                 return;
             _disposed = true;
-            _timer.Dispose();
             try
             {
                 FlushLocked();

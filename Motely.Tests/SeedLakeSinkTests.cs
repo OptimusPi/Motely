@@ -159,6 +159,23 @@ public sealed class SeedLakeSinkTests : IDisposable
     }
 
     [Fact]
+    public void Finds_stay_in_memory_until_Flush()
+    {
+        using var sink = new SeedLakeSink(_root, "perkeo");
+        sink.OnScored(Result("AAAAAAAA", 42));
+        Assert.True(sink.UsingLake);
+
+        using (var peek = SeedLake.Open(_root))
+            Assert.Equal(0, peek.DistinctSeedCount("perkeo"));
+
+        sink.Flush();
+
+        using var after = SeedLake.Open(_root);
+        Assert.Equal(1, after.DistinctSeedCount("perkeo"));
+        Assert.Equal("AAAAAAAA", after.Seeds("perkeo")[0]);
+    }
+
+    [Fact]
     public void Two_writers_on_one_catalog_at_once_lose_nothing()
     {
         // helper-api's in-process worker and MotelyWorker (or two CLI runs) write the same catalog at
