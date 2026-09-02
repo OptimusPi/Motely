@@ -16,14 +16,19 @@ internal sealed class ConsoleResultSink : IMotelyResultSink
 
     public ConsoleResultSink(IReadOnlyList<string>? tallyLabels = null)
     {
-        if (tallyLabels is { Count: > 0 })
-        {
-            var header = $"seed,score,{string.Join(",", tallyLabels)}";
-            StickyProgress.WriteResultLine(_color ? $"{Dim}{header}{Reset}" : header);
-        }
+        var header =
+            tallyLabels is { Count: > 0 }
+                ? $"seed,score,{string.Join(",", tallyLabels)}"
+                : "seed,score";
+        StickyProgress.WriteResultLine(_color ? $"{Dim}{header}{Reset}" : header);
     }
 
-    public void OnSeed(string seed) => StickyProgress.WriteResultLine(seed);
+    public void OnSeed(string seed)
+    {
+        var row = new MotelyScoredSeedResult();
+        row.Reset(seed, 0);
+        OnScored(in row);
+    }
 
     public void Flush() { }
 

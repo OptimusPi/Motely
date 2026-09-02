@@ -19,12 +19,12 @@ namespace Motely.Tests;
 /// </summary>
 public class JummyEquivalenceTests
 {
-    private static string GoldenDir => Path.Combine(AppContext.BaseDirectory, "GoldenJamlFiles");
+    private static string TestJamlDir => Path.Join(AppContext.BaseDirectory, "GoldenJamlFiles");
 
     /// <summary>Every Zerkeo variant on disk, discovered — the single source of truth is the folder.</summary>
     public static IEnumerable<object[]> ZerkeoVariants() =>
         Directory
-            .EnumerateFiles(GoldenDir, "Zerkeo*.jaml")
+            .EnumerateFiles(TestJamlDir, "Zerkeo*.jaml")
             .Select(Path.GetFileName)
             .OrderBy(name => name, System.StringComparer.Ordinal)
             .Select(name => new object[] { name! });
@@ -33,7 +33,7 @@ public class JummyEquivalenceTests
     {
         Assert.True(
             JamlConfigLoader.TryLoad(
-                File.ReadAllText(Path.Combine(GoldenDir, file)),
+                File.ReadAllText(Path.Join(TestJamlDir, file)),
                 out var config,
                 out var error
             ),

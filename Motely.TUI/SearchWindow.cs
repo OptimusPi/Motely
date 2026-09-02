@@ -347,10 +347,7 @@ public class SearchWindow : Window
                     break;
             }
 
-            int scoreTallyColumns = plan.ScoreTallyColumnCount;
-            bool hasStructuredScores = scoreTallyColumns > 0;
-
-            Application.Invoke(() => EnsureTallyColumns(scoreTallyColumns));
+            Application.Invoke(() => EnsureTallyColumns(plan.ScoreTallyColumnCount));
 
             // Durability + save-back in one place (same spine as Motely.CLI). Finds buffer in
             // in-memory DuckDB and flush to the lake at each search batch boundary (and Dispose).
@@ -362,36 +359,23 @@ public class SearchWindow : Window
             _persistence = new JamlSeedPersistence(
                 lakeRoot,
                 config.Id,
-                hasStructuredScores,
-                cutoff
+                cutoff,
+                tallyLabels: plan.TallyLabels
             );
             // Capture the instance locally so result callbacks (which fire on worker threads and
             // may arrive during teardown) never observe the field after Dispose nulls it.
             var persistence = _persistence;
 
-            if (hasStructuredScores)
+            persistence.OnScoredAccepted = tally =>
             {
-                persistence.OnScoredAccepted = tally =>
-                {
-                    var resultCount = Interlocked.Increment(ref _resultCount);
-                    var seed = tally.Seed;
-                    var score = tally.Score;
-                    var tallyValues = tally.TallyValuesSpan.ToArray();
-                    Application.Invoke(() => AppendRow(resultCount, seed, score, tallyValues));
-                };
-                settings.WithScoredResultCallback(tally => persistence.OnScored(in tally));
-                settings.WithBatchBoundaryCallback(persistence.Flush);
-            }
-            else
-            {
-                persistence.OnSeedAccepted = seed =>
-                {
-                    var resultCount = Interlocked.Increment(ref _resultCount);
-                    Application.Invoke(() => AppendRow(resultCount, seed, 0, System.Array.Empty<int>()));
-                };
-                settings.WithSeedMatchCallback(seed => persistence.OnSeed(seed));
-                settings.WithBatchBoundaryCallback(persistence.Flush);
-            }
+                var resultCount = Interlocked.Increment(ref _resultCount);
+                var seed = tally.Seed;
+                var score = tally.Score;
+                var tallyValues = tally.TallyValuesSpan.ToArray();
+                Application.Invoke(() => AppendRow(resultCount, seed, score, tallyValues));
+            };
+            settings.WithScoredResultCallback(tally => persistence.OnScored(in tally));
+            settings.WithBatchBoundaryCallback(persistence.Flush);
 
             Application.Invoke(() =>
             {

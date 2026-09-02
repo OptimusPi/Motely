@@ -101,14 +101,11 @@ public static class ProcessBlockRunner
             .WithEndBatchIndex(endBatch)
             .WithSequentialSearch();
 
-        if (plan.ScoreTallyColumnCount > 0)
-            settings = settings.WithScoredResultCallback(tally =>
-            {
-                seeds.Add(tally.Seed);
-                if (tally.Score > highestScore) highestScore = tally.Score;
-            });
-        else
-            settings = settings.WithSeedMatchCallback(seed => seeds.Add(seed));
+        settings = settings.WithScoredResultCallback(tally =>
+        {
+            seeds.Add(tally.Seed);
+            if (tally.Score > highestScore) highestScore = tally.Score;
+        });
 
         using var search = settings.Start(cancellationToken);
         await search.WaitForCompletionAsync(cancellationToken).ConfigureAwait(false);

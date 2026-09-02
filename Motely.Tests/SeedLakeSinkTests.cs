@@ -88,8 +88,7 @@ public sealed class SeedLakeSinkTests : IDisposable
         Assert.Equal(42, rows[0].Score);
         Assert.Equal([1, 0, 2], rows[0].Tallies!);
         Assert.Equal("BBBBBBBB", rows[1].Seed);
-        Assert.Null(rows[1].Score);
-        Assert.Null(rows[1].Tallies);
+        Assert.Equal(0, rows[1].Score);
         Assert.Equal(["Perkeo", "Showman", "Negative Tag"], lake.TallyLabels("perkeo"));
         Assert.Equal(["perkeo"], lake.FilterIds());
     }

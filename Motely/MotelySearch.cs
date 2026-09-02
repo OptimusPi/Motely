@@ -1315,13 +1315,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     {
         public const int MAX_SEED_WAIT_MS = 500;
 
-        // Auto-cutoff rate gate (see AutoCutoffState). Evaluated once per batch.
-        // Engage the monotonic-max clamp only when raw matches arrive faster than this;
-        // below it there's no interop pressure, so report everything. Conservative defaults,
-        // tunable. The window keeps the rate estimate stable across a single batch's jitter.
-        private const long AUTO_CUTOFF_GATE_WINDOW_MS = 250;
-        private const long AUTO_CUTOFF_ENGAGE_RATE_PER_SEC = 2000;
-
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
 
@@ -1355,14 +1348,11 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             // Highest score seen so far; the monotonic-max clamp floor. Starts at int.MinValue.
             public int LearnedCutoff;
 
-            // Raw candidate matches seen before the clamp (drives the rate estimate).
+            // Raw candidate matches seen before the clamp.
             public long RawMatches;
 
-            // RawMatches snapshot at the last gate evaluation.
             public long LastGateRawMatches;
-
-            // Elapsed ms at the last gate evaluation.
-            public long LastGateMs;
+            public long LastGateSeeds;
 
             // Candidates dropped by the clamp once engaged.
             public long SeedsFiltered;
@@ -1527,13 +1517,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 }
             }
 
-            // Re-evaluate the per-thread auto-cutoff rate gate for the next batch.
-            if (Search._autoScoreCutoff)
-                UpdateAutoCutoffGate();
-
-            Search.NotifyBatchBoundary();
-            // Report progress
-            Search.PrintReport();
+            OnBatchDone();
 
             return true;
         }
@@ -1591,13 +1575,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
             _localBatchesCompleted++;
 
-            if (Search._autoScoreCutoff)
-                UpdateAutoCutoffGate();
-
-            Search.NotifyBatchBoundary();
-            // Always report after a non-empty chew — including the drain batch — so progress
-            // can hit 100% on short lists and StopAfter races still see a final tick.
-            Search.PrintReport();
+            OnBatchDone();
 
             // Exhausted after this report batch → caller flushes and exits.
             return !_providerExhausted
@@ -1621,26 +1599,23 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             }
         }
 
-        // Per-thread auto-cutoff rate gate. Measures the RAW match rate (candidates seen
-        // before the clamp) over a short window and engages the monotonic-max clamp only
-        // while that rate would pressure the scored-result callback (costly across the WASM
-        // interop boundary). Rare searches never engage and report every match. No locking:
-        // each plan owns its own AutoCutoffState. A single threshold is safe because the raw
-        // rate is independent of whether the clamp is engaged, so it cannot oscillate.
-        private void UpdateAutoCutoffGate()
+        /// <summary>
+        /// End of a search batch: Auto engages when this batch's raw matches cover the
+        /// batch (matches &gt;= seeds searched this batch). Then persist sinks flush.
+        /// </summary>
+        private void OnBatchDone()
         {
-            long nowMs = Search._elapsedTime.ElapsedMilliseconds;
-            long windowMs = nowMs - _autoCutoffState.LastGateMs;
-            if (windowMs < AUTO_CUTOFF_GATE_WINDOW_MS)
-                return;
+            if (Search._autoScoreCutoff)
+            {
+                long batchMatches = _autoCutoffState.RawMatches - _autoCutoffState.LastGateRawMatches;
+                long batchSeeds = _localSeedsSearched - _autoCutoffState.LastGateSeeds;
+                _autoCutoffState.Engaged = batchSeeds > 0 && batchMatches >= batchSeeds;
+                _autoCutoffState.LastGateRawMatches = _autoCutoffState.RawMatches;
+                _autoCutoffState.LastGateSeeds = _localSeedsSearched;
+            }
 
-            long windowMatches = _autoCutoffState.RawMatches - _autoCutoffState.LastGateRawMatches;
-            long ratePerSec = windowMatches * 1000 / windowMs;
-
-            _autoCutoffState.Engaged = ratePerSec >= AUTO_CUTOFF_ENGAGE_RATE_PER_SEC;
-
-            _autoCutoffState.LastGateMs = nowMs;
-            _autoCutoffState.LastGateRawMatches = _autoCutoffState.RawMatches;
+            Search.NotifyBatchBoundary();
+            Search.PrintReport();
         }
 
         internal abstract void SearchProviderBatch();
@@ -1772,8 +1747,8 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                     {
                         int score = _resultBuffer[lane].Score;
 
-                        // Count every scored candidate BEFORE the clamp — this is the raw
-                        // match rate that drives the gate (see UpdateAutoCutoffGate).
+                        // Count every scored candidate BEFORE the clamp — this batch's
+                        // raw match count is what OnBatchDone uses to engage Auto.
                         _autoCutoffState.RawMatches++;
 
                         // Clamp only while engaged: drop anything below the running max.

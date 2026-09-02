@@ -142,7 +142,7 @@ class Program
             // Every find also lands in the local seed lake under the party JAML's own id — the report
             // cap above only limits what crosses the wire, never what this machine keeps.
             using var lake = localDbDir is null ? null
-                : new SeedLakeSink(localDbDir, config.Id, plan.ScoreTallyColumnCount > 0 ? plan.TallyLabels : null);
+                : new SeedLakeSink(localDbDir, config.Id, plan.TallyLabels);
             var settings = plan.Settings
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
@@ -151,20 +151,11 @@ class Program
                 .WithStartBatchIndex(lease.StartBlock)
                 .WithEndBatchIndex(lease.StartBlock + lease.BlockCount)
                 .WithSequentialSearch()
-                .WithBatchBoundaryCallback(() => lake?.Flush());
-            if (plan.ScoreTallyColumnCount > 0)
-                settings = settings.WithScoredResultCallback(t =>
+                .WithBatchBoundaryCallback(() => lake?.Flush())
+                .WithScoredResultCallback(t =>
                 {
                     lake?.OnScored(in t);
                     lock (seeds) { matchesFound++; if (seeds.Count < ReportCap) seeds.Add(t.Seed); }
-                });
-            else
-                settings = settings.WithSeedMatchCallback(line =>
-                {
-                    int comma = line.IndexOf(',');
-                    var seed = comma < 0 ? line : line[..comma];
-                    lake?.OnSeed(seed);
-                    lock (seeds) { matchesFound++; if (seeds.Count < ReportCap) seeds.Add(seed); }
                 });
 
             long seedsSearched = 0;

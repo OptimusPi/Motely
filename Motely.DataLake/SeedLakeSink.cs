@@ -58,7 +58,12 @@ public sealed class SeedLakeSink : IMotelyResultSink
         get { lock (_gate) return _opened ? _lake is not null : null; }
     }
 
-    public void OnSeed(string seed) => Write(seed, null, ReadOnlySpan<int>.Empty);
+    public void OnSeed(string seed)
+    {
+        var row = new MotelyScoredSeedResult();
+        row.Reset(seed, 0);
+        OnScored(in row);
+    }
 
     public void OnScored(in MotelyScoredSeedResult tally) => Write(tally.Seed, tally.Score, tally.TallyValuesSpan);
 

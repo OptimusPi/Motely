@@ -1,6 +1,10 @@
 {
     "name": "motely-wasm",
+    "version": "25.1.0",
     "type": "module",
+    "files": [
+        "bin/motely-wasm"
+    ],
     "exports": {
         ".": "./bin/motely-wasm/index.mjs",
         "./*": "./bin/motely-wasm/generated/modules/*.g.mjs"

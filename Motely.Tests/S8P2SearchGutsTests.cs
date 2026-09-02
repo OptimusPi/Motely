@@ -503,8 +503,8 @@ public sealed class S8P2SearchGutsTests
             .Start();
         search.AwaitCompletion();
 
-        // The 8-seed list matches the permissive must on every seed; the rate gate never
-        // engages at list speed, so every candidate is reported and none clamped away.
+        // One provider batch. Clamp only starts on the *next* batch if this one filled
+        // (matches >= seeds). A single list batch still reports every candidate.
         Assert.Equal(search.MatchingSeeds, scored.Count);
         Assert.True(scored.Count > 0);
         // Overstock-at-ante-1 seeds (5X5 etc.) outscore the rest — the cutoff learned a max.

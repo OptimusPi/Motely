@@ -1,17 +1,18 @@
 using Motely.Filters;
 using Motely.Filters.Jaml;
-using Xunit;
 
 namespace Motely.Tests;
 
-public sealed class JamlCorpusLoaderTests
+public sealed class JamlFileLoadTests
 {
     [Fact]
-    public void JamlFiltersCorpus_LoadsAllJamlFiles()
+    public void TestJamlFiles_AllLoadAndPlan()
     {
-        var corpusDir = FindCorpusDir();
+        var dir = Path.Join(AppContext.BaseDirectory, "GoldenJamlFiles");
+        Assert.True(Directory.Exists(dir), $"Test JAML files not in output: {dir}");
+
         var files = Directory
-            .GetFiles(corpusDir, "*.jaml", SearchOption.AllDirectories)
+            .GetFiles(dir, "*.jaml", SearchOption.AllDirectories)
             .OrderBy(static f => f, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
@@ -23,7 +24,7 @@ public sealed class JamlCorpusLoaderTests
             var content = File.ReadAllText(file);
             if (!JamlConfigLoader.TryLoad(content, out var config, out var error))
             {
-                failures.Add($"{Path.GetRelativePath(corpusDir, file)}: {error}");
+                failures.Add($"{Path.GetRelativePath(dir, file)}: {error}");
                 continue;
             }
 
@@ -35,26 +36,10 @@ public sealed class JamlCorpusLoaderTests
             }
             catch (Exception ex)
             {
-                failures.Add($"{Path.GetRelativePath(corpusDir, file)}: plan failed: {ex.Message}");
+                failures.Add($"{Path.GetRelativePath(dir, file)}: plan failed: {ex.Message}");
             }
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
-    }
-
-    private static string FindCorpusDir()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            var candidate = Path.Combine(dir.FullName, "JamlFilters");
-            if (Directory.Exists(candidate))
-                return candidate;
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException(
-            "Could not find JamlFilters from test output directory."
-        );
     }
 }

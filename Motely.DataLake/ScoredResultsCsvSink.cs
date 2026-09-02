@@ -31,7 +31,12 @@ public sealed class ScoredResultsCsvSink : IMotelyResultSink
         _tallyLabels = tallyLabels;
     }
 
-    public void OnSeed(string seed) { /* Bare seeds carry no score/tallies — nothing to write here. */ }
+    public void OnSeed(string seed)
+    {
+        var row = new MotelyScoredSeedResult();
+        row.Reset(seed, 0);
+        OnScored(in row);
+    }
 
     public void OnScored(in MotelyScoredSeedResult tally)
     {
@@ -64,7 +69,11 @@ public sealed class ScoredResultsCsvSink : IMotelyResultSink
                 bool writeHeader = !File.Exists(_path) || new FileInfo(_path).Length == 0;
                 _writer = new StreamWriter(_path, append: true) { AutoFlush = false };
                 if (writeHeader)
-                    _writer.WriteLine($"Seed,Score,{string.Join(",", _tallyLabels)}");
+                    _writer.WriteLine(
+                        _tallyLabels.Count == 0
+                            ? "Seed,Score"
+                            : $"Seed,Score,{string.Join(",", _tallyLabels)}"
+                    );
             }
 
             _writer.WriteLine(line);

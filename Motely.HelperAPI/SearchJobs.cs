@@ -184,16 +184,8 @@ public sealed class SearchJob : IDisposable
                     _etaMs = p.EstimatedTimeRemainingMilliseconds;
                 });
 
-            if (_config.Should.Count > 0)
-            {
-                settings = settings.WithScoredResultCallback(r =>
-                    Record(new FoundSeedDto(r.Seed, r.Score, [.. r.Tally.Select(b => (int)b)])));
-            }
-            else
-            {
-                settings = settings.WithSeedMatchCallback(seed =>
-                    Record(new FoundSeedDto(seed, 0, null)));
-            }
+            settings = settings.WithScoredResultCallback(r =>
+                Record(new FoundSeedDto(r.Seed, r.Score, [.. r.Tally.Select(b => (int)b)])));
 
             if (StopAfter > 0)
                 settings = settings.StopAfter(StopAfter);

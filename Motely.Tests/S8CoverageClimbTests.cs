@@ -328,7 +328,12 @@ public sealed class S8CoverageClimbTests
         public List<int> Scores { get; } = [];
         public bool Disposed { get; private set; }
 
-        public void OnSeed(string seed) => Seeds.Add(seed);
+        public void OnSeed(string seed)
+        {
+            var row = new MotelyScoredSeedResult();
+            row.Reset(seed, 0);
+            OnScored(in row);
+        }
 
         public void Flush() { }
 
@@ -356,7 +361,7 @@ public sealed class S8CoverageClimbTests
         }
         Assert.Equal(["SEED1", "SEED2"], a.Seeds);
         Assert.Equal(["SEED1", "SEED2"], b.Seeds);
-        Assert.Equal([42], a.Scores);
+        Assert.Equal([0, 42], a.Scores);
         Assert.True(a.Disposed && b.Disposed);
     }
 

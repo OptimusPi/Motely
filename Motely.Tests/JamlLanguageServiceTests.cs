@@ -26,7 +26,7 @@ public sealed class JamlLanguageServiceTests
     }
 
     [Fact]
-    public void Diagnose_GoldenFile_IsClean()
+    public void Diagnose_TagVoucher_IsClean()
     {
         var text = File.ReadAllText(Path.Combine("GoldenJamlFiles", "tag-voucher.jaml"));
         Assert.Empty(JamlLanguageService.Diagnose(text));

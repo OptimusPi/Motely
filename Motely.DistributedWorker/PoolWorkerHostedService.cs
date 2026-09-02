@@ -95,20 +95,12 @@ public sealed class PoolWorkerHostedService : BackgroundService
                 // ── Local seed lake ──────────────────────────────────────
                 // Finds buffer in in-memory DuckDB and flush to the lake at each search batch.
                 using var lake = localDbDir is null ? null
-                    : new SeedLakeSink(localDbDir, claim.FilterId, plan.ScoreTallyColumnCount > 0 ? plan.TallyLabels : null);
-                settings = settings.WithBatchBoundaryCallback(() => lake?.Flush());
-
-                if (plan.ScoreTallyColumnCount > 0)
-                    settings = settings.WithScoredResultCallback(tally =>
+                    : new SeedLakeSink(localDbDir, claim.FilterId, plan.TallyLabels);
+                settings = settings.WithBatchBoundaryCallback(() => lake?.Flush())
+                    .WithScoredResultCallback(tally =>
                     {
                         lake?.OnScored(in tally);
                         matchResults.Add(new SeedResultDto { Seed = tally.Seed, Score = tally.Score });
-                    });
-                else
-                    settings = settings.WithSeedMatchCallback(seed =>
-                    {
-                        lake?.OnSeed(seed);
-                        matchResults.Add(new SeedResultDto { Seed = seed });
                     });
 
                 try

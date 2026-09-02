@@ -3,11 +3,11 @@ namespace Motely.Tests;
 public sealed class JamlConfigWriterTests
 {
     [Fact]
-    public void ToJaml_RoundTripsEveryCorpusFile()
+    public void ToJaml_RoundTripsEveryTestJamlFile()
     {
-        var corpusDir = FindCorpusDir();
+        var dir = TestJamlDir();
         var files = Directory
-            .GetFiles(corpusDir, "*.jaml", SearchOption.AllDirectories)
+            .GetFiles(dir, "*.jaml", SearchOption.AllDirectories)
             .OrderBy(static f => f, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
@@ -16,8 +16,13 @@ public sealed class JamlConfigWriterTests
         var failures = new List<string>();
         foreach (var file in files)
         {
-            var relative = Path.GetRelativePath(corpusDir, file);
-            var original = JamlConfigLoader.FromJaml(File.ReadAllText(file));
+            var relative = Path.GetRelativePath(dir, file);
+            if (!JamlConfigLoader.TryLoad(File.ReadAllText(file), out var original, out var loadError)
+                || original is null)
+            {
+                failures.Add($"{relative}: load failed: {loadError}");
+                continue;
+            }
 
             string written;
             try
@@ -90,19 +95,11 @@ public sealed class JamlConfigWriterTests
         Assert.Equal(3, or.Min);
     }
 
-    private static string FindCorpusDir()
+    private static string TestJamlDir()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            var candidate = Path.Combine(dir.FullName, "JamlFilters");
-            if (Directory.Exists(candidate))
-                return candidate;
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException(
-            "Could not find JamlFilters from test output directory."
-        );
+        var dir = Path.Join(AppContext.BaseDirectory, "GoldenJamlFiles");
+        if (!Directory.Exists(dir))
+            throw new DirectoryNotFoundException($"Test JAML files not in output: {dir}");
+        return dir;
     }
 }

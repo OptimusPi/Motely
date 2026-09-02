@@ -45,7 +45,7 @@
     <None Update="seeds/*.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!-- Golden JAML files travel to the test output so data-driven tests can load them by name. -->
+    <!-- Test JAML files travel to the output so data-driven tests can load them by name. -->
     <None Update="GoldenJamlFiles/*.jaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -747,39 +747,18 @@ partial class Program
 
                 using var _jamlSourceLifetime = jamlSourceLifetime;
 
-                int scoreTallyColumns = plan.ScoreTallyColumnCount;
-                bool hasStructuredScores = scoreTallyColumns > 0;
                 string? lakeRoot = resultsPathOption.HasValue()
                     ? resultsPathOption.ParsedValue
                     : null;
 
-                // Console is the ONLY cutoff-gated sink. --cutoff decides what you read while the
-                // run scrolls past; it must never decide what survives the run. Auto cutoff climbs
-                // to the running maximum, so gating disk on it discarded every find below the
-                // current best — hours of search existed only in terminal scrollback.
-                using var consoleSink = new ConsoleResultSink(
-                    hasStructuredScores ? plan.TallyLabels : null
+                using var consoleSink = new ConsoleResultSink(plan.TallyLabels);
+                using var persistSink = new CompositeMotelyResultSink(
+                    [
+                        new SeedLakeSink(lakeRoot, config.Id, plan.TallyLabels),
+                        new ScoredResultsCsvSink(lakeRoot, config.Id, plan.TallyLabels),
+                    ]
                 );
-
-                // Disk takes every match, unconditionally. The seed lake is not a scoring artifact:
-                // a must:-only JAML has no tallies at all, and its finds are exactly what --drown
-                // replays later, so gating the lake on hasStructuredScores meant those filters
-                // persisted nothing, anywhere.
-                var persistSinks = new List<IMotelyResultSink>
-                {
-                    new SeedLakeSink(lakeRoot, config.Id, hasStructuredScores ? plan.TallyLabels : null),
-                };
-                if (hasStructuredScores)
-                {
-                    // Full scored rows (seed, score, tallies) only exist when the filter scores.
-                    persistSinks.Add(
-                        new ScoredResultsCsvSink(lakeRoot, config.Id, plan.TallyLabels)
-                    );
-                }
-                using var persistSink = new CompositeMotelyResultSink(persistSinks);
                 var saveSeedsCollector = new MotelyTopSeedSink.Collector(int.MaxValue);
-                var saveSeedMatches = new List<string>();
-                var saveSeedMatchSet = new HashSet<string>(StringComparer.Ordinal);
 
                 // Always attach a progress callback so 'p' hotkey stays current;
                 // quiet mode swaps in the silent capture variant.
@@ -788,42 +767,16 @@ partial class Program
                         quietOption.HasValue() ? CaptureProgress : WriteProgressLineToStderr
                     )
                     .WithBatchBoundaryCallback(persistSink.Flush)
-                    .WithAutoScoreCutoff(cutoff.IsAuto);
-
-                if (hasStructuredScores)
-                {
-                    settings = settings.WithScoredResultCallback(tally =>
+                    .WithAutoScoreCutoff(cutoff.IsAuto)
+                    .WithScoredResultCallback(tally =>
                     {
-                        // Buffer first; DuckLake/CSV hit disk at the search batch boundary.
-                        persistSink.OnScored(in tally);
-
                         if (!cutoff.ShouldEmit(tally.Score))
                             return;
 
+                        persistSink.OnScored(in tally);
                         consoleSink.OnScored(in tally);
-                        // Gated on purpose: this feeds the JAML seeds: save-back, which is a
-                        // curated list, not the archive. The lake above already has everything.
                         saveSeedsCollector.Consider(tally.Seed, tally.Score);
                     });
-                }
-                else
-                {
-                    settings = settings.WithSeedMatchCallback(seed =>
-                    {
-                        // Every worker thread calls this, and the engine serializes nothing. A bare
-                        // HashSet/List here loses finds under concurrent Add — silently, and more often
-                        // the more threads are working. The lock costs nothing at match frequency.
-                        lock (saveSeedMatches)
-                        {
-                            persistSink.OnSeed(seed);
-                            consoleSink.OnSeed(seed);
-                            if (saveSeedMatchSet.Add(seed))
-                            {
-                                saveSeedMatches.Add(seed);
-                            }
-                        }
-                    });
-                }
 
                 if (!quietOption.HasValue())
                 {
@@ -939,9 +892,7 @@ partial class Program
 
                 cancelled |= _cts.Token.IsCancellationRequested;
                 {
-                    var seedsToSave = hasStructuredScores
-                        ? saveSeedsCollector.GetSeeds()
-                        : (IReadOnlyList<string>)saveSeedMatches;
+                    var seedsToSave = saveSeedsCollector.GetSeeds();
 
                     if (JamlFileLoader.TrySaveSeeds(docPath, seedsToSave, out var saveError))
                         Console.Error.WriteLine(
