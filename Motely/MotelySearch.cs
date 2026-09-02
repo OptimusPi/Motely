@@ -618,6 +618,9 @@ public interface IMotelySearch : IDisposable
     /// </summary>
     bool StoppedOnMatchLimit { get; }
 
+    /// <summary>Finds this run kept, in arrival order. Empty until the search has reported.</summary>
+    IReadOnlyList<MotelySeedScore> Results { get; }
+
     IMotelySearch Start(CancellationToken cancellationToken = default);
     Task RunSearchAsync(CancellationToken cancellationToken = default);
     void AwaitCompletion();
@@ -773,6 +776,8 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         }
     }
 
+    public IReadOnlyList<MotelySeedScore> Results => [.. _results];
+
     /// <summary>
     /// Seeds searched that did not match (base filter rejected, additional filter rejected,
     /// or below score cutoff). Equal to <see cref="TotalSeedsSearched"/> minus
@@ -827,6 +832,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private readonly Action<string>? _seedMatchCallback;
     private readonly Action<MotelyScoredSeedResult>? _scoredResultCallback;
     private readonly Action? _batchBoundaryCallback;
+    private readonly System.Collections.Concurrent.ConcurrentBag<MotelySeedScore> _results = [];
     private readonly bool _autoScoreCutoff;
     private readonly long _progressReportIntervalMs;
     /// <summary>Provider-mode: seeds to chew per report batch (SIMD still 8-wide).</summary>
@@ -1765,6 +1771,10 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                     }
 
                     Search._scoredResultCallback?.Invoke(_resultBuffer[lane]);
+                    ref readonly var row = ref _resultBuffer[lane];
+                    Search._results.Add(
+                        new MotelySeedScore(row.Seed, row.Score, row.TallyValuesSpan.ToArray())
+                    );
                     _localMatchingSeeds++;
                     Search.NoteMatchForStop();
                 }

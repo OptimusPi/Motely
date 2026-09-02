@@ -8,7 +8,7 @@ CPU Balatro seed search: AVX-512 lanes (8 seeds), JAML filters, CLI + WASM + LSP
 | `Motely.CLI` | Search entry; seed lake = DuckLake with catalog `ducklake.sqlite` at the root, data under `Seeds/` |
 | `Motely.Lsp` | stdio JSON-RPC; answers from engine only |
 | `vscode-jaml` | languageclient host only |
-| `Motely.Wasm` / `motely-wasm` | same search surface for JS |
+| `Motely.Wasm` / `motely-wasm` | Bootsharp hosts Search + Analyze. Motely.dll has zero Bootsharp. Publish `-c Release` (LLVM, not Mono). |
 
 ## Quick start
 

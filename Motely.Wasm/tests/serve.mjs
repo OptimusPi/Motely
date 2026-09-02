@@ -1,4 +1,3 @@
-// Minimal static server for the published AppBundle. Usage: node serve.mjs <dir> <port>
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
@@ -10,8 +9,6 @@ const mime = {
   ".mjs": "text/javascript",
   ".json": "application/json",
   ".wasm": "application/wasm",
-  ".dat": "application/octet-stream",
-  ".symbols": "text/plain",
 };
 
 createServer(async (req, res) => {

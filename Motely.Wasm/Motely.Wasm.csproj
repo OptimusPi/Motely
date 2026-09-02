@@ -5,24 +5,33 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>Motely.Wasm</AssemblyName>
     <RootNamespace>Motely.Wasm</RootNamespace>
-    <!-- Bootsharp's default. ICU stays out of the bundle; JAML is invariant anyway. -->
     <InvariantGlobalization>true</InvariantGlobalization>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- Names the emitted ES module + WASM binary, so the bundle matches the npm package. -->
     <BootsharpName>motely-wasm</BootsharpName>
+    <!-- PackageTemplate.json has no version and overwrites this project's package.json. Park it. -->
+    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Bootsharp generates the TypeScript head (.g.d.mts) from [Export] at build time and
-         serializes records/enums across the boundary itself. Nothing in this project restates
-         an engine type: no DTO twins, no JSON strings, no hand-typed vocabulary. -->
     <PackageReference Include="Bootsharp" />
+    <PackageReference Include="VYaml" GeneratePathProperty="true" />
+    <PackageReference Include="VYaml.Annotations" GeneratePathProperty="true" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <!-- Same protocol-free language brain the stdio LSP server uses: diagnostics, hover and
-         completion come from the engine's own grammar, never a hand-written JS copy. -->
-    <ProjectReference Include="..\Motely.Lsp.Core\Motely.Lsp.Core.csproj" />
   </ItemGroup>
+
+  <!--
+    Patched inspect ALC (D:\bootsharp InspectionContext) resolves user-assembly
+    neighbours from OutputPath. VYaml.Annotations must be there; it has no .wasm
+    so GenerateJS will not Load() it itself.
+  -->
+  <Target Name="StageVYamlAnnotationsForInspect" BeforeTargets="BootsharpCS;BootsharpJS">
+    <Copy
+      SourceFiles="$(PkgVYaml_Annotations)\lib\net8.0\VYaml.Annotations.dll"
+      DestinationFolder="$(OutputPath)"
+      SkipUnchangedFiles="true"
+      Condition="Exists('$(PkgVYaml_Annotations)\lib\net8.0\VYaml.Annotations.dll')" />
+  </Target>
 </Project>
