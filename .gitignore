@@ -68,7 +68,6 @@ desktop.ini
 /analysis.json
 /JamlFilters/old
 nuget.config.local
-/Motely.HelperAPI/wwwroot
 /.claude/*
 !/.claude/skills/
 !/.claude/settings.json

@@ -38,22 +38,6 @@ public static partial class JamlConfigLoader
         }
     }
 
-    public static bool TryLoadFromJson(
-        string json,
-        [NotNullWhen(true)] out JamlConfig? config,
-        out string? error
-    ) => TryLoad(json, JamlLoadFormat.Json, out config, out error);
-
-    public static bool TryLoadFromYaml(
-        string yaml,
-        [NotNullWhen(true)] out JamlConfig? config,
-        out string? error
-    ) => TryLoad(yaml, JamlLoadFormat.Yaml, out config, out error);
-
-    public static JamlConfig FromJson(string json) => From(json, JamlLoadFormat.Json);
-
-    public static JamlConfig FromYaml(string yaml) => From(yaml, JamlLoadFormat.Yaml);
-
     public static JamlConfig FromJaml(string content) => From(content, JamlLoadFormat.Jaml);
 
     public static JamlConfig From(string content, JamlLoadFormat format)

@@ -17,18 +17,6 @@ dotnet build
 dotnet run --project Motely.CLI -- --jaml JamlFilters/AlwaysPass.jaml --collect 1
 ```
 
-## Run everything (Aspire)
-
-`aspire run` (or `dotnet run --project Motely.AppHost`) starts the long-running pieces behind one dashboard (logs, traces, metrics); nothing needs Docker:
-
-| resource | what | where |
-|---|---|---|
-| `helper-api` | `Motely.HelperAPI` — `/health`, `/api/validate`, `/api/search` (Launchpad) | http://localhost:3141 |
-| `distributed-worker` | `MotelyWorker` in Search Party mode against seedfinder.app — set the `party-id` parameter, then start it | explicit start |
-| `jaml-ui` | Storybook of the sibling `../jaml-ui` checkout, only when it exists | http://localhost:6006 |
-
-Parameters (dashboard → Parameters, or `Parameters:<name>` in `Motely.AppHost/appsettings.Development.json`): `seedfinder-pool-url` (blank by default, so helper-api's in-process pool worker stays idle), `party-id`, `party-server`. Every resource gets the repo's own `JamlFilters/` and `Seeds/` (the seed lake — DuckLake, SQLite catalog `ducklake.sqlite` at the repo root, Parquet under `Seeds/`) rather than its project directory's. `Motely.Tests/AppHostModelTests.cs` pins this composition without starting it.
-
 Filters are JAML text → `JamlConfig`. Clause families live on FilterDescs; `JamlSchema` is the generated index. Docs for WASM: `Motely.Wasm/README.md`.
 
 Which seeds get searched (sequential, `--source`, `--keyword`, `--random`, `--aesthetic`, `--collect`, `--drown` the whole seed lake, `--replay` a JAML's own seeds) and which entry points expose each: `docs/SEED-INPUT-MODES.md`.
