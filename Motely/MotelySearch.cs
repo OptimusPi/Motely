@@ -1709,6 +1709,9 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
                 // Report the scored results!
                 ReportScoredResults(scoredMask, in searchParams);
+
+                // After scoring, on the survivors, same context. Observes; never gates.
+                Search._analyzeProvider?.Analyze(ref searchContext, scoredMask);
             }
             else if (Search._seedRouter != null)
             {
@@ -1729,6 +1732,15 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             {
                 // No score provider - report basic seeds
                 ReportBasicSeeds(searchResultMask, in searchParams);
+
+                if (Search._analyzeProvider != null)
+                {
+                    MotelyVectorSearchContext searchContext = new(
+                        in Search._searchParameters,
+                        in searchParams
+                    );
+                    Search._analyzeProvider.Analyze(ref searchContext, searchResultMask);
+                }
             }
         }
 
