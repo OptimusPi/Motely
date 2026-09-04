@@ -14,25 +14,32 @@ public sealed class JamlLoaderValueReaderTests
 {
     // ── scalar / array construction ──
 
+    /// <summary>Blank is the whole category, same as the word "any". It is not a number.</summary>
     [Fact]
-    public void FromScalar_NullBecomesEmptyNotNull()
+    public void FromScalar_NullBecomesBlank_WhichIsAny()
     {
         var reader = JamlLoaderValueReader.FromScalar(null);
 
         Assert.Equal("", reader.Text);
-        Assert.False(reader.IsAny);
+        Assert.True(reader.IsAny);
         Assert.False(reader.TryInt(out _));
         Assert.False(reader.TryIntArray(out var ints));
         Assert.Empty(ints);
     }
 
+    /// <summary>A null list is blank, so it is any. An explicit <c>[]</c> is present and wrong: the
+    /// whole category is spelled Any or left blank, and the error says so.</summary>
     [Fact]
-    public void FromStrings_EmptyOrNullIsAbsent()
+    public void FromStrings_NullIsAny_EmptyListIsRejected()
     {
-        Assert.Equal("", JamlLoaderValueReader.FromStrings(null).Text);
-        Assert.Equal("", JamlLoaderValueReader.FromStrings([]).Text);
-        Assert.False(JamlLoaderValueReader.FromStrings([]).TryEnumArray<MotelyVoucher>(out var v));
-        Assert.Empty(v);
+        var blank = JamlLoaderValueReader.FromStrings(null);
+        Assert.Equal("", blank.Text);
+        Assert.True(blank.IsAny);
+
+        var empty = JamlLoaderValueReader.FromStrings([]);
+        var ex = Assert.ThrowsAny<InvalidOperationException>(() => empty.TryEnumArray<MotelyVoucher>(out _));
+        Assert.Contains("Any", ex.Message);
+        Assert.ThrowsAny<InvalidOperationException>(() => empty.TryIntArray(out _));
     }
 
     [Fact]
@@ -49,9 +56,10 @@ public sealed class JamlLoaderValueReaderTests
     [InlineData("any", true)]
     [InlineData("ANY", true)]
     [InlineData("Any", true)]
+    [InlineData("", true)]
+    [InlineData("   ", true)]
     [InlineData("anything", false)]
-    [InlineData("", false)]
-    public void IsAny_IsCaseInsensitiveExactMatch(string text, bool expected) =>
+    public void IsAny_IsBlankOrTheWordAny(string text, bool expected) =>
         Assert.Equal(expected, JamlLoaderValueReader.FromScalar(text).IsAny);
 
     // ── ints ──

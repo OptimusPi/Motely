@@ -151,15 +151,15 @@ internal static class JamlCountDistribution
 
     /// <summary>
     /// <c>P(min ≤ count ≤ max)</c>, with exactly <c>MeetsOccurrenceBounds</c>'s reading of the
-    /// gate: <c>min</c> is the lower bound, and <c>max</c> is an upper bound only when it is
-    /// positive — null or zero means no ceiling. A window nothing can land in is an honest
+    /// gate: <c>min</c> is the lower bound, and a set <c>max</c> is the upper bound at every
+    /// value — only null means no ceiling. A window nothing can land in is an honest
     /// <c>0.0</c>, never NaN: asking for more matches than the sources can produce is impossible,
     /// and the report prints impossible as such.
     /// </summary>
     public static double Window(double[] pmf, int min, int? max)
     {
         int lower = Math.Max(min, 0);
-        int upper = max is { } m && m > 0 ? m : int.MaxValue;
+        int upper = max ?? int.MaxValue;
         if (lower > upper)
             return 0.0;
 

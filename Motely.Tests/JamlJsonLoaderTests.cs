@@ -5,6 +5,14 @@ namespace Motely.Tests;
 
 public class JamlJsonLoaderTests
 {
+    /// <summary>The one must clause is a joker clause naming no joker, which the engine reads as the whole category.</summary>
+    private static void AssertSingleMustIsAnyJoker(JamlConfig config)
+    {
+        var clause = Assert.Single(config.Must);
+        var joker = Assert.IsType<JokerClause>(clause);
+        Assert.Empty(joker.Jokers);
+    }
+
     [Fact]
     public void FromJson_HappyPath_ParsesDeckStakeAndClauses()
     {
@@ -47,7 +55,7 @@ public class JamlJsonLoaderTests
         var config = JamlConfigLoader.FromJson(
             """{ "must": [{ "joker": null }] }"""
         );
-        Assert.Empty(Assert.IsType<JokerClause>(Assert.Single(config.Must)).Jokers);
+        AssertSingleMustIsAnyJoker(config);
     }
 
     [Fact]
@@ -59,7 +67,7 @@ public class JamlJsonLoaderTests
               - joker:
             """
         );
-        Assert.Empty(Assert.IsType<JokerClause>(Assert.Single(config.Must)).Jokers);
+        AssertSingleMustIsAnyJoker(config);
     }
 
     [Fact]
@@ -76,7 +84,7 @@ public class JamlJsonLoaderTests
             """
         );
         Assert.Equal("hello world\n", config.Description);
-        Assert.Empty(Assert.IsType<JokerClause>(Assert.Single(config.Must)).Jokers);
+        AssertSingleMustIsAnyJoker(config);
     }
 
     [Fact]
@@ -88,7 +96,7 @@ public class JamlJsonLoaderTests
               - joker: Any
             """
         );
-        Assert.Empty(Assert.IsType<JokerClause>(Assert.Single(config.Must)).Jokers);
+        AssertSingleMustIsAnyJoker(config);
     }
 
     [Fact]
@@ -97,16 +105,18 @@ public class JamlJsonLoaderTests
         var fromYaml = JamlConfigLoader.FromYaml(
             """
             name: yaml happy
-            deck: Red
+            deck: red
+            stake: white
             must:
               - joker: Blueprint
             """
         );
         var fromJson = JamlConfigLoader.FromJson(
-            """{ "name": "yaml happy", "deck": "Red", "must": [{ "joker": "Blueprint" }] }"""
+            """{ "name": "yaml happy", "deck": "red", "stake": "white", "must": [{ "joker": "Blueprint" }] }"""
         );
 
         Assert.Equal(fromJson.Deck, fromYaml.Deck);
+        Assert.Equal(fromJson.Stake, fromYaml.Stake);   
         Assert.IsType<JokerClause>(Assert.Single(fromYaml.Must));
         Assert.IsType<JokerClause>(Assert.Single(fromJson.Must));
     }

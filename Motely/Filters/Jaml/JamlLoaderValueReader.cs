@@ -23,15 +23,29 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
 
     public string Text => _text;
     public JamlSpan Span { get; }
+
     public bool IsAny => JamlDisc.IsAnyToken(_text);
+
+    private bool IsEmptyList => _hasArray && _array is { Length: 0 };
+
+    private void RejectEmptyList()
+    {
+        if (IsEmptyList)
+            throw new JamlSemanticException(
+                "'[]' is not a value. Write Any, or leave it blank, for the whole category.",
+                Span
+            );
+    }
 
     public static JamlLoaderValueReader FromScalar(string? text, JamlSpan span = default) =>
         new(text ?? "", null, false, span);
 
     public static JamlLoaderValueReader FromStrings(string[]? values, JamlSpan span = default)
     {
-        if (values is null || values.Length == 0)
+        if (values is null)
             return new("", null, false, span);
+        if (values.Length == 0)
+            return new("", values, true, span);
         if (values.Length == 1)
             return new(values[0], values, true, span);
         return new(string.Join(", ", values), values, true, span);
@@ -65,33 +79,26 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
 
     public bool TryIntArray(out int[] value)
     {
+        RejectEmptyList();
         if (string.IsNullOrWhiteSpace(_text) && !(_hasArray && _array is { Length: > 0 }))
         {
             value = [];
             return false;
         }
 
-        if (int.TryParse(_text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var one)
-            && !(_hasArray && _array is { Length: > 1 }))
+        string[] tokens = _hasArray && _array is { Length: > 0 } ? _array : [_text];
+        var list = new List<int>(tokens.Length);
+        foreach (var token in tokens)
         {
-            value = [one];
-            return true;
+            if (JamlLine.TrySplitRange(token, out int lo, out int hi))
+                JamlLine.AppendRange(list, lo, hi);
+            else if (int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out var one))
+                list.Add(one);
+            else
+                throw new JamlSemanticException($"Cannot parse '{token}' as an int or range.", Span);
         }
-
-        if (_hasArray && _array is not null)
-        {
-            var list = new int[_array.Length];
-            for (int i = 0; i < _array.Length; i++)
-            {
-                if (!int.TryParse(_array[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out list[i]))
-                    throw new JamlSemanticException($"Cannot parse '{_array[i]}' as int.", Span);
-            }
-            value = list;
-            return true;
-        }
-
-        value = [];
-        return false;
+        value = [.. list];
+        return true;
     }
 
     public bool TryEnum<TEnum>(out TEnum value) where TEnum : struct, Enum
@@ -126,6 +133,8 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
 
     public bool TryEnumArray<TEnum>(out TEnum[] value) where TEnum : struct, Enum
     {
+        RejectEmptyList();
+
         var parts = _hasArray && _array is { Length: > 0 }
             ? _array
             : (JamlDisc.IsAnyToken(_text) ? null : new[] { _text });

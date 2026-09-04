@@ -662,29 +662,13 @@ partial class Program
 
                 // stderr, not stdout: `--jaml x -q > seeds.txt` must produce seeds and nothing else.
                 // --estimate prints even under --quiet, since printing this is the whole request.
-                if (estimateOption.HasValue() || !quietOption.HasValue())
+                if (!quietOption.HasValue())
                 {
-                    // Time the filter on this machine first — one 35⁴ batch on one thread, scaled
-                    // to the run's thread count — so "Find:" is a measured figure. The probe builds
-                    // its own plan; `settings` above is untouched. Null only if it was cancelled or
-                    // the engine threw, in which case the report's "unknown" wording is the truth.
-                    JamlSpeedProbe.Result? probe = await JamlSpeedProbe.MeasureAsync(
-                        config,
-                        engineCutoff,
-                        deck,
-                        stake,
-                        threads,
-                        _cts.Token
-                    );
-                    if (probe is { } measured)
-                        Console.Error.WriteLine(measured.Describe());
 
                     foreach (
                         string line in JamlRarityReport.Render(
                             JamlRarityEstimator.Estimate(config),
                             searchSpace,
-                            seedsPerSecond: probe?.Projected,
-                            speedIsMeasured: probe.HasValue,
                             config.SimdCostPerSeed(),
                             config.EstimateFilterCrunches(),
                             collectLimit

@@ -14,6 +14,9 @@ public sealed class JamlMaxAndOmenGlobeTests
     [InlineData(1, 1, 1, true)]
     [InlineData(3, 2, 4, true)]
     [InlineData(5, 2, 4, false)]
+    [InlineData(0, 0, 0, true)] // max 0 is a ceiling: exactly none
+    [InlineData(1, 0, 0, false)]
+    [InlineData(1, 1, 0, false)] // ceiling below the floor: nothing passes
     public void MeetsOccurrenceBounds_MinAndOptionalMax(
         int raw,
         int min,

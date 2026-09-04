@@ -61,9 +61,9 @@ internal static class JamlRollRarity
         if (double.IsNaN(perTrial) || trials < 0)
             return double.NaN;
 
-        // Mirrors MeetsOccurrenceBounds exactly, including that a Max of 0 means "no upper gate"
-        // rather than "at most zero" — the two readings differ on every clause that sets it.
-        int upper = max is { } m && m > 0 ? Math.Min(m, trials) : trials;
+        // Mirrors MeetsOccurrenceBounds exactly: a set Max is a ceiling at every value, and only
+        // null means "no upper gate". A ceiling below the floor is an empty window, hence 0.0.
+        int upper = max is { } m ? Math.Min(m, trials) : trials;
         int lower = Math.Max(min, 0);
 
         if (lower > upper)

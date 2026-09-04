@@ -243,7 +243,9 @@ public static class JamlScoring
 
     /// <summary>
     /// Match bounds contract: <see cref="IJamlClause.Min"/> is the lower gate;
-    /// <see cref="IJamlClause.Max"/> when set is the upper gate for must / filter confirm.
+    /// <see cref="IJamlClause.Max"/> when set is the upper gate for must / filter confirm, at
+    /// every value — null is the only "no ceiling". The loader guarantees <c>1 ≤ min ≤ max</c>
+    /// (<c>JamlConfigLoader.ValidateBounds</c>), so a zero ceiling never reaches here today.
     /// Score tallies still use <see cref="CapScoreCount"/> so should columns cap contribution.
     /// SIMD prefilters may stay over-permissive on Max; scoring / exact confirm enforce it.
     /// </summary>
@@ -252,7 +254,7 @@ public static class JamlScoring
     {
         if (raw < clause.Min)
             return false;
-        if (clause.Max is { } max && max > 0 && raw > max)
+        if (clause.Max is { } max && raw > max)
             return false;
         return true;
     }
@@ -261,7 +263,7 @@ public static class JamlScoring
     private static int CapScoreCount(int count, IJamlClause clause)
     {
         var max = clause.Max;
-        return max is > 0 && count > max.Value ? max.Value : count;
+        return max is { } m && count > m ? m : count;
     }
 
     private static int UnhandledClauseForScoring(IJamlClause clause)

@@ -262,8 +262,6 @@ public static class JamlRarityReport
     public static IReadOnlyList<string> Render(
         in JamlRarityEstimate rarity,
         in JamlSearchSpace space,
-        double? seedsPerSecond,
-        bool speedIsMeasured,
         double simdCostPerSeed,
         int filterCrunchesPerBatch,
         long collectLimit
@@ -274,7 +272,6 @@ public static class JamlRarityReport
             Line(
                 "Cost:",
                 $"~{simdCostPerSeed:0.#} crunches/seed "
-                    + $"({filterCrunchesPerBatch:N0} per {MotelyGlobals.MaxVectorWidth}-seed batch, worst case)"
             ),
         ];
 
@@ -334,32 +331,7 @@ public static class JamlRarityReport
                 );
         }
 
-        double secondsToFirst = double.NaN;
-        if (seedsPerSecond is { } speed && speed > 0)
-        {
-            secondsToFirst = SecondsToFirstMatch(p, speed);
-            string suffix = speedIsMeasured ? "(measured)" : "(est.)";
-            string body =
-                collectLimit > 1
-                    ? $"~{Duration(secondsToFirst)} to the first, ~{Duration(secondsToFirst * collectLimit)} for all {collectLimit}"
-                    : $"~{Duration(secondsToFirst)} to the first match";
-            lines.Add(Line("Find:", (bounded ? "at least " : "") + $"{body} @ {Speed(speed)} {suffix}"));
-        }
-        else
-        {
-            lines.Add(Line("Find:", "unknown until a run has been timed on this machine"));
-        }
-
-        // The warning the whole feature exists for: the sweep runs out before the odds turn over.
-        if (space.IsKnown && collectLimit <= 0 && !double.IsNaN(atLeastOne) && atLeastOne < 0.5)
-        {
-            string sweep =
-                seedsPerSecond is { } v && v > 0
-                    ? $"this sweep exhausts the space in ~{Duration(SecondsToSweepSpace(space.SeedCount, v))}, so "
-                    : "";
-            lines.Add(Line("Note:", $"{sweep}you will most likely finish empty-handed."));
-            lines.Add(Line("", "Relax the filter, or search a different deck/stake."));
-        }
+        lines.Add(Line("Find:", "unknown until a run has been timed on this machine"));
 
         return lines;
     }

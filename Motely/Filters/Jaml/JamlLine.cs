@@ -777,7 +777,7 @@ public static class JamlLine
         return ([.. values], null);
     }
 
-    private static void AppendRange(List<int> values, int lo, int hi)
+    internal static void AppendRange(List<int> values, int lo, int hi)
     {
         if (lo <= hi)
             for (int n = lo; n <= hi; n++) values.Add(n);
@@ -788,7 +788,8 @@ public static class JamlLine
     // Recognizes "A-B", "A..B", or "A<en-dash>B" as an inclusive integer range. Returns false for a
     // plain number (which the caller parses directly) or anything that isn't two integers around a
     // single separator, so genuinely malformed tokens still surface as errors.
-    private static bool TrySplitRange(string token, out int lo, out int hi)
+    // This is the one range grammar for JAML: the block loader and the value reader call it too.
+    internal static bool TrySplitRange(string token, out int lo, out int hi)
     {
         lo = 0;
         hi = 0;

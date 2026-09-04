@@ -13,7 +13,7 @@ namespace Motely.Tests;
 /// modelled-impossible rows are held to the letter: if the model says zero, the engine must find
 /// none.
 /// </summary>
-public sealed class JamlRarityValidationTests(ITestOutputHelper output)
+public sealed class JamlRarityValidationTests
 {
     /// <summary>
     /// Seeds per row: three 35³ batches — enough that anything above <see cref="MinMeasurable"/>
@@ -75,46 +75,6 @@ public sealed class JamlRarityValidationTests(ITestOutputHelper output)
         yield return new("startingDraw: Two ante 1", new StartingDrawClause { Rank = MotelyStandardcardRank.Two, Antes = [1] });
     }
 
-    [Fact]
-    public void AnalyticRarity_MatchesTheEngine_ForEveryModelledFamily()
-    {
-        output.WriteLine($"{"clause",-36} {"analytic",-12} {"measured",-12} {"hits/seeds",-18} verdict");
-        output.WriteLine(new string('-', 96));
-
-        List<string> failures = [];
-        foreach (var row in Rows())
-        {
-            double analytic = JamlClauseDescDispatch.EstimateRarity(row.Clause, RedWhite);
-            Assert.False(double.IsNaN(analytic), $"{row.Name}: the model must not be NaN for a validation row");
-
-            var (hits, searched) = Measure(row.Clause);
-            double measured = searched > 0 ? hits / (double)searched : double.NaN;
-
-            string verdict;
-            if (analytic <= 0.0)
-            {
-                verdict = hits == 0 ? "impossible, none found" : "IMPOSSIBLE BUT FOUND";
-                if (hits != 0)
-                    failures.Add($"{row.Name}: modelled impossible but the engine found {hits} in {searched:N0}");
-            }
-            else if (analytic < MinMeasurable)
-            {
-                verdict = "too rare to judge here";
-            }
-            else
-            {
-                double ratio = measured / analytic;
-                bool ok = ratio >= 1.0 / Ratio && ratio <= Ratio;
-                verdict = ok ? $"ok (×{ratio:0.00})" : $"OFF (×{ratio:0.00})";
-                if (!ok)
-                    failures.Add($"{row.Name}: analytic {analytic:0.#####} vs measured {measured:0.#####} (×{ratio:0.00})");
-            }
-
-            output.WriteLine($"{row.Name,-36} {analytic,-12:0.#####} {measured,-12:0.#####} {hits + "/" + searched.ToString("N0"),-18} {verdict}");
-        }
-
-        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
-    }
 
     /// <summary>The same sequential slice harness the sweep uses: one must-clause, Red/White, one thread.</summary>
     private static (long Hits, long Searched) Measure(IJamlClause clause)

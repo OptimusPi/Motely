@@ -27,14 +27,15 @@ public sealed class JamlPoolRarityTests
 
     // ── the toolkit ────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>The gate reads exactly as MeetsOccurrenceBounds: min is a floor, max a ceiling only when positive.</summary>
+    /// <summary>The gate reads exactly as MeetsOccurrenceBounds: min is a floor, a set max is a ceiling at every value.</summary>
     [Fact]
     public void Window_MirrorsMeetsOccurrenceBounds()
     {
         double[] pmf = [0.1, 0.2, 0.3, 0.4];
 
         Assert.Equal(0.9, JamlCountDistribution.Window(pmf, 1, null), Tol);
-        Assert.Equal(0.9, JamlCountDistribution.Window(pmf, 1, 0), Tol); // Max 0 = no ceiling
+        Assert.Equal(0.0, JamlCountDistribution.Window(pmf, 1, 0), Tol); // ceiling below the floor: empty window
+        Assert.Equal(0.1, JamlCountDistribution.Window(pmf, 0, 0), Tol); // max 0 is "exactly none"
         Assert.Equal(0.3, JamlCountDistribution.Window(pmf, 2, 2), Tol);
         Assert.Equal(1.0, JamlCountDistribution.Window(pmf, 0, null), Tol);
         Assert.Equal(0.0, JamlCountDistribution.Window(pmf, 5, null), Tol);

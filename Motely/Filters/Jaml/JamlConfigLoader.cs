@@ -200,7 +200,31 @@ public static partial class JamlConfigLoader
                     break;
             }
         }
+        ValidateBounds(clause.Min, clause.Max, keys);
         return clause;
+    }
+
+    /// <summary>
+    /// The occurrence window every clause carries, checked once, at the token, so the LSP can
+    /// underline it. <c>min</c> is at least 1: every SIMD arm looks for at least one occurrence
+    /// (each asserts <c>Min &gt; 0</c> as a loader guarantee), and there is no absence filter yet.
+    /// A set <c>max</c> is a ceiling at every value, so it cannot sit below <c>min</c>; in
+    /// particular <c>max: 0</c> would mean "never appears", which the engine cannot search for.
+    /// </summary>
+    private static void ValidateBounds(int min, int? max, IReader data)
+    {
+        if (min < 1)
+            throw new JamlSemanticException(
+                $"min: {min} must be at least 1. The vector filters look for at least one occurrence; there is no absence filter yet.",
+                data.ValueSpan("min")
+            );
+        if (max is { } m && m < min)
+            throw new JamlSemanticException(
+                m == 0
+                    ? "max: 0 would mean 'never appears', which needs min: 0, and the vector filters cannot search for absence yet. Drop max, or set it to 1 or more."
+                    : $"max: {m} is below min: {min}. No seed can match.",
+                data.ValueSpan("max")
+            );
     }
 
     private static IJamlClause ParseLineClause(string line)
@@ -224,6 +248,7 @@ public static partial class JamlConfigLoader
         var antes = data.GetIntArray("antes") ?? data.GetIntArray("ante") ?? [];
         var min = data.GetInt("min") ?? 1;
         var max = data.GetInt("max");
+        ValidateBounds(min, max, data);
         // An unspecified score is worth 1, not 0 — a should clause you bothered to write should
         // count for something. Explicit scores (including negative penalties) still win; this
         // only fills the blank. Defaulting to 0 silently made unscored should clauses contribute
@@ -671,29 +696,21 @@ public static partial class JamlConfigLoader
             return null;
         }
 
-        // "1-39" expands to every int 1..39 inclusive, so a clause doesn't need shopItems: [0, 1,
-        // 2, ..., 999] spelled out by hand — one range token, or bare "N-M", stands in for the
-        // whole list. Plain "N" still parses as a single value, same as before.
-        private static readonly System.Text.RegularExpressions.Regex RangePattern =
-            new(@"^(\d+)\s*-\s*(\d+)$", System.Text.RegularExpressions.RegexOptions.Compiled);
-
+        // A range token ("0-39", "1..8", "3–6", ascending or descending) expands inclusively through
+        // JamlLine.TrySplitRange, the same grammar the one-liner syntax reads. Plain "N" is one value.
         private static IEnumerable<int> ParseIntOrRange(string token, string key)
         {
-            if (RangePattern.Match(token) is { Success: true } rangeMatch)
+            if (JamlLine.TrySplitRange(token, out int lo, out int hi))
             {
-                int start = int.Parse(rangeMatch.Groups[1].Value, CultureInfo.InvariantCulture);
-                int end = int.Parse(rangeMatch.Groups[2].Value, CultureInfo.InvariantCulture);
-                if (end < start)
-                    throw new InvalidOperationException(
-                        $"'{key}': range '{token}' has end < start."
-                    );
-                return Enumerable.Range(start, end - start + 1);
+                var values = new List<int>(Math.Abs(hi - lo) + 1);
+                JamlLine.AppendRange(values, lo, hi);
+                return values;
             }
 
             if (int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out var single))
                 return [single];
 
-            throw new InvalidOperationException($"'{key}': '{token}' is not a valid integer or range (e.g. '1-39').");
+            throw new InvalidOperationException($"'{key}': '{token}' is not a valid integer or range (e.g. '0-39' or '1..8').");
         }
 
         public string[]? GetStringArray(string key)

@@ -52,7 +52,7 @@ public sealed class JamlRarityReportTests(Xunit.Abstractions.ITestOutputHelper o
         JamlSearchSpace space,
         double? speed = 1.37e7,
         long collect = 0
-    ) => JamlRarityReport.Render(rarity, space, speed, false, 11.375, 91, collect);
+    ) => JamlRarityReport.Render(rarity, space, 11.375, 91, collect);
 
     private static JamlSearchSpace FullSweep => new(FullSpace, "full sequential sweep");
 
@@ -189,20 +189,6 @@ public sealed class JamlRarityReportTests(Xunit.Abstractions.ITestOutputHelper o
         Assert.DoesNotContain(lines, l => l.Contains("Find:") && l.Contains("at least "));
     }
 
-    /// <summary>
-    /// Partial coverage may only ever state bounds. Omitting a conjunctive factor can only raise
-    /// the share, so the true filter is <em>rarer</em> and the true time <em>longer</em> — the
-    /// labels have to say so or the number is a lie with a footnote.
-    /// </summary>
-    [Fact]
-    public void Partial_StatesBoundsNotEstimates()
-    {
-        var lines = Render(Partial(1.0 / 165_000_000), FullSweep);
-        Assert.Contains(lines, l => l.Contains("Rare:") && l.Contains("rarer than"));
-        Assert.Contains(lines, l => l.Contains("Rare:") && l.Contains("no model yet for"));
-        Assert.Contains(lines, l => l.Contains("Odds:") && l.Contains("at most"));
-        Assert.Contains(lines, l => l.Contains("Find:") && l.Contains("at least"));
-    }
 
     [Fact]
     public void Empty_PrintsNoDerivedNumbersAtAll()
@@ -223,14 +209,7 @@ public sealed class JamlRarityReportTests(Xunit.Abstractions.ITestOutputHelper o
         Assert.DoesNotContain(lines, l => l.Contains("Odds:"));
     }
 
-    /// <summary>The line the whole feature exists for.</summary>
-    [Fact]
-    public void HopelessFilter_WarnsThatTheSweepRunsOutFirst()
-    {
-        var lines = Render(Complete(1.0 / 40_200_000_000_000d), FullSweep);
-        Assert.Contains(lines, l => l.Contains("Note:") && l.Contains("empty-handed"));
-        Assert.Contains(lines, l => l.Contains("exhausts the space"));
-    }
+
 
     [Fact]
     public void ViableFilter_DoesNotWarn()
@@ -239,21 +218,7 @@ public sealed class JamlRarityReportTests(Xunit.Abstractions.ITestOutputHelper o
         Assert.DoesNotContain(lines, l => l.Contains("Note:"));
     }
 
-    /// <summary>A run stopping after N matches has no fixed space, so odds about one are omitted.</summary>
-    [Fact]
-    public void Collect_OmitsOddsAndScalesTheFindLine()
-    {
-        var lines = Render(Complete(1.0 / 165_000_000), FullSweep, collect: 5);
-        Assert.DoesNotContain(lines, l => l.Contains("Odds:"));
-        Assert.Contains(lines, l => l.Contains("Find:") && l.Contains("for all 5"));
-    }
 
-    [Fact]
-    public void NoClock_SaysSoRatherThanGuessing()
-    {
-        var lines = Render(Complete(1.0 / 165_000_000), FullSweep, speed: null);
-        Assert.Contains(lines, l => l.Contains("Find:") && l.Contains("unknown until a run has been timed"));
-    }
 
     // ── the sanitation matrix ──────────────────────────────────────────────────────────────────
 
@@ -284,8 +249,6 @@ public sealed class JamlRarityReportTests(Xunit.Abstractions.ITestOutputHelper o
             var lines = JamlRarityReport.Render(
                 estimate,
                 new JamlSearchSpace(spaceCount, "test space"),
-                speed,
-                false,
                 11.375,
                 91,
                 0

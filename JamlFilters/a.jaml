@@ -1,11 +1,6 @@
 name: Whimsy Dicetricks
 author: for pi — Perkeo + Hieroglyph + Showman + Negative skip-tag + stacked Oops/copy core + lucky ladder
-description: >
-  Perkeo from early packs; Hieroglyph voucher ante 1; Showman early (antes 1-3)
-  so the Oops can stack; Negative small-blind Tag ante 4; Oops! All 6s in the
-  ante-4 shop (slots 2-4) as a must. Should: stacked Oops at antes 4 and 5, the
-  copy/retrigger core, and the lucky hit-stream ladders (money + mult, 8 to 1).
-  Anaglyph so every skip tag doubles.
+description: 
 deck: Anaglyph
 stake: White
 must:

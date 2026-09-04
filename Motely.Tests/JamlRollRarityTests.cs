@@ -80,18 +80,19 @@ public sealed class JamlRollRarityTests
     }
 
     /// <summary>
-    /// <c>MeetsOccurrenceBounds</c> reads a Max of 0 as "no upper gate", so this must too. The
-    /// other reading — "at most zero" — is the one a fresh implementation reaches for, and it
-    /// silently zeroes every clause that leaves Max unset-but-present.
+    /// A Max of 0 is a ceiling like any other, exactly as <c>MeetsOccurrenceBounds</c> reads it:
+    /// with min 0 it is "neither roll fires", (14/15)²; with the default min of 1 the window is
+    /// empty and the answer is an honest zero. Only a null Max means "no upper gate".
     /// </summary>
     [Fact]
-    public void MaxOfZero_MeansUnbounded()
+    public void MaxOfZero_IsACeiling()
     {
         Assert.Equal(
-            LuckyMoneyFilterDesc.EstimateRarity(LuckyMoney([0, 1]), Ctx),
-            LuckyMoneyFilterDesc.EstimateRarity(LuckyMoney([0, 1], max: 0), Ctx),
+            Math.Pow(14.0 / 15.0, 2),
+            LuckyMoneyFilterDesc.EstimateRarity(LuckyMoney([0, 1], min: 0, max: 0), Ctx),
             Tolerance
         );
+        Assert.Equal(0.0, LuckyMoneyFilterDesc.EstimateRarity(LuckyMoney([0, 1], max: 0), Ctx), Tolerance);
     }
 
     /// <summary>An upper gate genuinely excludes: exactly one of two flips is 2·½·½.</summary>
