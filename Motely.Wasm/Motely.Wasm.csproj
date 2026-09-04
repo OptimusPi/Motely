@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Motely.Wasm</AssemblyName>
+    <RootNamespace>Motely.Wasm</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BootsharpName>motely-wasm</BootsharpName>
+    <!-- PackageTemplate.json has no version and overwrites this project's package.json. Park it. -->
+    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bootsharp" />
+    <PackageReference Include="VYaml" GeneratePathProperty="true" />
+    <PackageReference Include="VYaml.Annotations" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+  </ItemGroup>
+
+  <!--
+    Patched inspect ALC (D:\bootsharp InspectionContext) resolves user-assembly
+    neighbours from OutputPath. VYaml.Annotations must be there; it has no .wasm
+    so GenerateJS will not Load() it itself.
+  -->
+  <Target Name="StageVYamlAnnotationsForInspect" BeforeTargets="BootsharpCS;BootsharpJS">
+    <Copy
+      SourceFiles="$(PkgVYaml_Annotations)\lib\net8.0\VYaml.Annotations.dll"
+      DestinationFolder="$(OutputPath)"
+      SkipUnchangedFiles="true"
+      Condition="Exists('$(PkgVYaml_Annotations)\lib\net8.0\VYaml.Annotations.dll')" />
+  </Target>
+</Project>

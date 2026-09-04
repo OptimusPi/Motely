@@ -13,34 +13,24 @@
 - `dotnet run --project Motely.CLI -- --jaml JamlFilters/AlwaysPass.jaml --collect 1`
 - WASM: `dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Release` — always `-c Release` (LLVM). `-c Debug` is Mono. See AGENTS.md.
 
-## Pinned: Bootsharp docs (`D:bootsharpdocsguide`) — loaded every session
+## Bootsharp documentation — `D:\bootsharp\docs\guide\`
 
-@D:/bootsharp/docs/index.md
-@D:/bootsharp/docs/guide/index.md
-@D:/bootsharp/docs/guide/getting-started.md
-@D:/bootsharp/docs/guide/build-config.md
-@D:/bootsharp/docs/guide/declarations.md
-@D:/bootsharp/docs/guide/interop-modules.md
-@D:/bootsharp/docs/guide/interop-instances.md
-@D:/bootsharp/docs/guide/serialization.md
-@D:/bootsharp/docs/guide/renaming.md
-@D:/bootsharp/docs/guide/specialization.md
-@D:/bootsharp/docs/guide/sideloading.md
-@D:/bootsharp/docs/guide/llvm.md
-@D:/bootsharp/docs/guide/extensions/dependency-injection.md
-@D:/bootsharp/docs/guide/extensions/file-system.md
+| Doc | Read it when |
+|-----|--------------|
+| [serialization.md](D:\bootsharp\docs\guide\serialization.md) | anything crosses the boundary: enums as numbers + name maps, `Dictionary`→`Map`, records by value |
+| [specialization.md](D:\bootsharp\docs\guide\specialization.md) | before changing interop shapes; byref never crosses |
+| [interop-modules.md](D:\bootsharp\docs\guide\interop-modules.md) | module layout / namespace→path mapping |
+| [interop-instances.md](D:\bootsharp\docs\guide\interop-instances.md) | classes/interfaces passed by reference |
+| [renaming.md](D:\bootsharp\docs\guide\renaming.md) | `[RenameModule]` / `[RenameNode]`, what JS sees |
+| [declarations.md](D:\bootsharp\docs\guide\declarations.md) | generated `.g.d.mts` from `[Export]` |
+| [build-config.md](D:\bootsharp\docs\guide\build-config.md) | before touching `Motely.Wasm.csproj` |
+| [llvm.md](D:\bootsharp\docs\guide\llvm.md) | NativeAOT-LLVM publish |
+| [sideloading.md](D:\bootsharp\docs\guide\sideloading.md) | shipping the bundle |
+| [getting-started.md](D:\bootsharp\docs\guide\getting-started.md) | wiring Bootsharp into a project the first time |
+| [extensions/dependency-injection.md](D:\bootsharp\docs\guide\extensions\dependency-injection.md) | `Bootsharp.Inject` |
+| [extensions/file-system.md](D:\bootsharp\docs\guide\extensions\file-system.md) | `Bootsharp.FileSystem` (source at `D:\extra`) |
 
-## Pinned: Bootsharp samples
-
-@D:/bootsharp/samples/minimal/README.md
-@D:/bootsharp/samples/react/README.md
-@D:/bootsharp/samples/vscode/README.md
-@D:/bootsharp/samples/trimming/README.md
-@D:/bootsharp/samples/bench/readme.md
-
-@D:/bootsharp/README.md
-
-Source: `D:\bootsharp\src\cs\` (Bootsharp.Publish inspection/codegen, Bootsharp.Common specializations)
+Root: [D:\bootsharp\README.md](D:\bootsharp\README.md) · Samples: `D:\bootsharp\samples\` — `minimal`, `react`, `trimming`, `vscode`, `bench`
 
 ## Operator
 
