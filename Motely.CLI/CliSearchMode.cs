@@ -27,8 +27,8 @@ internal static class CliSearchMode
         long? StartBatch,
         long? EndBatch,
         double? StartPercent,
-        long? StartSeedSearchIndex,
-        long? StopSeedSearchIndex,
+        string? StartSeed,
+        string? StopSeed,
         int? BatchCharacterCount
     );
 
@@ -83,7 +83,7 @@ internal static class CliSearchMode
         bool hasAestheticMode = explicitAesthetic.HasValue || aestheticAll;
 
         bool hasSeedIndexOptions =
-            input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
+            input.StartSeed is not null || input.StopSeed is not null;
         if (hasSeedIndexOptions)
         {
             if (
@@ -339,7 +339,7 @@ internal static class CliSearchMode
             ).ApplyTo(updated);
 
             bool hasSeedRange =
-                input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
+                input.StartSeed is not null || input.StopSeed is not null;
             if (hasSeedRange)
             {
                 if (
@@ -353,22 +353,21 @@ internal static class CliSearchMode
                     return false;
                 }
 
-                long maxIdx = SeedMath.MaxSearchIndexInclusive(MotelyGlobals.MaxSeedLength);
-                long startIdx = input.StartSeedSearchIndex ?? 0;
-                long stopIdx = input.StopSeedSearchIndex ?? maxIdx;
-                if (startIdx < 0 || stopIdx < startIdx || stopIdx > maxIdx)
+                // A seed names the batch that contains it, in the engine's sweep order: the batch
+                // digits are the seed's tail (SeedToBatchIndex), not a reading-order index.
+                long startBatch = input.StartSeed is { } startSeed
+                    ? SeedMath.SeedToBatchIndex(startSeed, batchCharacterCount)
+                    : 0;
+                long endBatchExclusive = input.StopSeed is { } stopSeed
+                    ? SeedMath.SeedToBatchIndex(stopSeed, batchCharacterCount) + 1
+                    : long.MaxValue;
+                if (startBatch >= endBatchExclusive)
                 {
                     error =
-                        $"Error: --startSeed/--stopSeed must satisfy 0 <= start <= stop <= {maxIdx} (Motely search index for length-{MotelyGlobals.MaxSeedLength} seeds).";
+                        $"Error: --stopSeed {input.StopSeed} is in batch {endBatchExclusive - 1}, before --startSeed {input.StartSeed} in batch {startBatch} (sweep order, not alphabetical).";
                     return false;
                 }
-
-                var (sb, ebExclusive) = SeedMath.SearchIndexRangeToBatchRange(
-                    startIdx,
-                    stopIdx,
-                    batchCharacterCount
-                );
-                updated = updated.WithStartBatchIndex(sb).WithEndBatchIndex(ebExclusive);
+                updated = updated.WithStartBatchIndex(startBatch).WithEndBatchIndex(endBatchExclusive);
             }
             else
             {

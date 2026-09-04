@@ -43,51 +43,50 @@ partial class Program
     static bool TryParseSeedOptions(
         CommandOption<string> startSeedOption,
         CommandOption<string> stopSeedOption,
-        out long? startIndex,
-        out long? stopIndex,
+        out string? startSeed,
+        out string? stopSeed,
         out string? error
     )
     {
-        startIndex = null;
-        stopIndex = null;
+        startSeed = null;
+        stopSeed = null;
         error = null;
 
         if (startSeedOption.HasValue())
         {
-            if (!TryParseSeedString(startSeedOption.ParsedValue, out var idx, out var err))
+            if (!TryParseSeedString(startSeedOption.ParsedValue, out startSeed, out var err))
             {
                 error = $"Error: --startSeed: {err}";
                 return false;
             }
-            startIndex = idx;
         }
         if (stopSeedOption.HasValue())
         {
-            if (!TryParseSeedString(stopSeedOption.ParsedValue, out var idx, out var err))
+            if (!TryParseSeedString(stopSeedOption.ParsedValue, out stopSeed, out var err))
             {
                 error = $"Error: --stopSeed: {err}";
                 return false;
             }
-            stopIndex = idx;
         }
         return true;
     }
 
-    static bool TryParseSeedString(string input, out long index, out string? error)
+    /// <summary>Validates an 8-character seed and returns it normalized (upper-case, 0→O).</summary>
+    static bool TryParseSeedString(string input, out string? seed, out string? error)
     {
-        index = 0;
+        seed = null;
         error = null;
-        var seed = MotelyGlobals.NormalizeSeed(input);
+        var normalized = MotelyGlobals.NormalizeSeed(input);
         // Motely's sequential search ranges over full 8-char seeds (11111111 → ZZZZZZZZ),
         // so --startSeed/--stopSeed must be exactly 8 chars. No padding: a short seed
         // would silently map to a different point than the user typed.
-        if (seed.Length != MotelyGlobals.MaxSeedLength)
+        if (normalized.Length != MotelyGlobals.MaxSeedLength)
         {
             error =
                 $"'{input}' must be exactly {MotelyGlobals.MaxSeedLength} characters (1-9, A-Z).";
             return false;
         }
-        foreach (char c in seed)
+        foreach (char c in normalized)
         {
             if (!MotelyGlobals.SeedDigits.Contains(c))
             {
@@ -97,7 +96,7 @@ partial class Program
                 return false;
             }
         }
-        index = SeedMath.SeedToSearchIndex(seed);
+        seed = normalized;
         return true;
     }
 
@@ -394,8 +393,8 @@ partial class Program
                     !TryParseSeedOptions(
                         startSeedOption,
                         stopSeedOption,
-                        out var nStartIdx,
-                        out var nStopIdx,
+                        out var nStartSeed,
+                        out var nStopSeed,
                         out var seedOptError
                     )
                 )
@@ -435,8 +434,8 @@ partial class Program
                             StartPercent: startPercentOption.HasValue()
                                 ? startPercentOption.ParsedValue
                                 : null,
-                            StartSeedSearchIndex: nStartIdx,
-                            StopSeedSearchIndex: nStopIdx,
+                            StartSeed: nStartSeed,
+                            StopSeed: nStopSeed,
                             BatchCharacterCount: nBatch
                         ),
                         msg => Console.Error.WriteLine(msg),
@@ -598,8 +597,8 @@ partial class Program
                     !TryParseSeedOptions(
                         startSeedOption,
                         stopSeedOption,
-                        out var jStartIdx,
-                        out var jStopIdx,
+                        out var jStartSeed,
+                        out var jStopSeed,
                         out var jSeedOptError
                     )
                 )
@@ -730,8 +729,8 @@ partial class Program
                             StartPercent: startPercentOption.HasValue()
                                 ? startPercentOption.ParsedValue
                                 : null,
-                            StartSeedSearchIndex: jStartIdx,
-                            StopSeedSearchIndex: jStopIdx,
+                            StartSeed: jStartSeed,
+                            StopSeed: jStopSeed,
                             BatchCharacterCount: explicitBatchCharCount
                         ),
                         msg => Console.Error.WriteLine(msg),
