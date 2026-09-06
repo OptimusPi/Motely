@@ -174,6 +174,25 @@ public sealed class SeedLakeSinkTests : IDisposable
         Assert.Equal("AAAAAAAA", after.Seeds("perkeo")[0]);
     }
 
+    [Fact]
+    public void Two_writers_on_one_catalog_at_once_lose_nothing()
+    {
+        const int perWriter = 1500, overlap = 500;
+        string Seed(int i) => "S" + i.ToString("D7");
+
+        Parallel.For(0, 2, writer =>
+        {
+            using var sink = new SeedLakeSink(_root, "perkeo");
+            int start = writer * (perWriter - overlap);
+            for (int i = start; i < start + perWriter; i++)
+                sink.OnScored(Result(Seed(i), i % 100, i % 3));
+            Assert.True(sink.UsingLake);
+        });
+
+        using var lake = SeedLake.Open(_root);
+        Assert.Equal(2 * perWriter - overlap, lake.DistinctSeedCount("perkeo"));
+        Assert.Equal(2 * perWriter - overlap, lake.Seeds("perkeo").Count);
+    }
 
     [Fact]
     public void Falls_back_to_the_legacy_file_when_the_catalog_cannot_attach()

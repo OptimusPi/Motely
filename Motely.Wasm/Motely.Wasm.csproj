@@ -22,16 +22,4 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
-  <!--
-    Patched inspect ALC (D:\bootsharp InspectionContext) resolves user-assembly
-    neighbours from OutputPath. VYaml.Annotations must be there; it has no .wasm
-    so GenerateJS will not Load() it itself.
-  -->
-  <Target Name="StageVYamlAnnotationsForInspect" BeforeTargets="BootsharpCS;BootsharpJS">
-    <Copy
-      SourceFiles="$(PkgVYaml_Annotations)\lib\net8.0\VYaml.Annotations.dll"
-      DestinationFolder="$(OutputPath)"
-      SkipUnchangedFiles="true"
-      Condition="Exists('$(PkgVYaml_Annotations)\lib\net8.0\VYaml.Annotations.dll')" />
-  </Target>
 </Project>

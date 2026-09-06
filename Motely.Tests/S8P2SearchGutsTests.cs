@@ -328,10 +328,14 @@ public sealed class S8P2SearchGutsTests
         public readonly struct CountingAnalyzeProvider(CountingAnalyzeDesc owner)
             : IMotelySeedAnalyzeProvider
         {
-            public void Analyze(ref MotelyVectorSearchContext ctx, VectorMask baseFilterMask)
+            public void Analyze(
+                ref MotelyVectorSearchContext ctx,
+                VectorMask reportedMask,
+                Motely.Filters.MotelyScoredSeedResult[]? scores
+            )
             {
                 for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)
-                    if (baseFilterMask[lane])
+                    if (reportedMask[lane])
                         owner.LanesSeen++;
             }
         }

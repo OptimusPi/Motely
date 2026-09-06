@@ -308,6 +308,11 @@ partial class Program
 
         app.OnExecuteAsync(async _ =>
         {
+            if (glossaryOption.HasValue())
+            {
+                Console.WriteLine(MotelyGlossary.Render());
+                return 0;
+            }
 
             if (args.Length == 0)
             {

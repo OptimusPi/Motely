@@ -1,41 +1,26 @@
-# CLAUDE.md
+# CLAUDE.md — MotelyJAML
 
-@AGENTS.md
-@README.md
+Technical notes only. Personality: `$GROK_HOME/AGENTS.md`. Repo work-shape: `AGENTS.md`.
+Handoff / Cowork / brainstorm markdown in this tree is **not** standing law unless the current message names it.
 
-**Links only. Do not inline these files.** Read the one you need, when you need it.
+## Running things
 
-## Build / test
+Search:      dotnet run --project Motely.CLI -c Release -- --jaml JamlFilters/X.jaml
+Score seeds: ... --source path/to/seeds.csv   (seeds ride the first column)
+Publish:     dotnet publish -c Release Motely.CLI   (AOT; IL2104 is suppressed in the csproj)
+Filters live in JamlFilters/. Validate JAML through the engine, not by eye.
+`dotnet run -c Release` is the normal path. Don't reach for publish unless asked.
 
-- SDK pinned by `global.json` (10.0.x). Solution is `Motely.slnx`.
-- `dotnet build`
-- `dotnet test` — xunit + Verify. A `*.received.*` next to a `*.verified.*` is a snapshot diff, not a pass.
-- `dotnet run --project Motely.CLI -- --jaml JamlFilters/AlwaysPass.jaml --collect 1`
-- WASM: `dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Release` — always `-c Release` (LLVM). `-c Debug` is Mono. See AGENTS.md.
+## Tests
 
-## Bootsharp documentation — `D:\bootsharp\docs\guide\`
+The full Motely.Tests suite exceeds 64 GB of RAM and gets killed by Windows. Run tests
+with `--filter` scoped to one class or method at a time. If a run gets killed, don't
+re-run it unchanged.
 
-| Doc | Read it when |
-|-----|--------------|
-| [serialization.md](D:\bootsharp\docs\guide\serialization.md) | anything crosses the boundary: enums as numbers + name maps, `Dictionary`→`Map`, records by value |
-| [specialization.md](D:\bootsharp\docs\guide\specialization.md) | before changing interop shapes; byref never crosses |
-| [interop-modules.md](D:\bootsharp\docs\guide\interop-modules.md) | module layout / namespace→path mapping |
-| [interop-instances.md](D:\bootsharp\docs\guide\interop-instances.md) | classes/interfaces passed by reference |
-| [renaming.md](D:\bootsharp\docs\guide\renaming.md) | `[RenameModule]` / `[RenameNode]`, what JS sees |
-| [declarations.md](D:\bootsharp\docs\guide\declarations.md) | generated `.g.d.mts` from `[Export]` |
-| [build-config.md](D:\bootsharp\docs\guide\build-config.md) | before touching `Motely.Wasm.csproj` |
-| [llvm.md](D:\bootsharp\docs\guide\llvm.md) | NativeAOT-LLVM publish |
-| [sideloading.md](D:\bootsharp\docs\guide\sideloading.md) | shipping the bundle |
-| [getting-started.md](D:\bootsharp\docs\guide\getting-started.md) | wiring Bootsharp into a project the first time |
-| [extensions/dependency-injection.md](D:\bootsharp\docs\guide\extensions\dependency-injection.md) | `Bootsharp.Inject` |
-| [extensions/file-system.md](D:\bootsharp\docs\guide\extensions\file-system.md) | `Bootsharp.FileSystem` (source at `D:\extra`) |
+## Working rules
 
-Root: [D:\bootsharp\README.md](D:\bootsharp\README.md) · Samples: `D:\bootsharp\samples\` — `minimal`, `react`, `trimming`, `vscode`, `bench`
-
-## Operator
-
-- CAPS is emphasis, not distress. Typos are speed. Do not shift register.
-- The FilterDesc is the source of truth. Never hand-type a list the engine already knows.
-- Say what was checked and what was not. Do not state conclusions the evidence does not reach.
-- Decide small things yourself. Do not ask the operator about one sentence.
-- If another Claude session is live on this machine (ListAgents), message it directly. Do not make the operator relay.
+- After any interrupt, re-read the last three user messages before choosing an action.
+  Never re-propose the thing that was just interrupted.
+- Before claiming a change works, re-run whatever proved the previous state worked.
+  If it fails, roll back, then say so.
+- Do not create memory or notes files on your own initiative.

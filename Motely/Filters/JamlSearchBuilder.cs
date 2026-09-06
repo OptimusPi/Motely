@@ -79,19 +79,28 @@ public static class JamlSearchBuilder
             }
             : clause;
 
-    public static IMotelySearchSettings CreateSettings(JamlConfig config, int engineCutoff = 0)
+    /// <summary>
+    /// The ante normalization every scoring pass assumes, applied in place:
+    /// 1) Parent and:/or: antes pass through nested arms that did not override (re-hoist so
+    ///    programmatic clause trees match loader shape).
+    /// 2) Still-empty antes → default 1..8 (sourceless == "anywhere"). Neg Tag authors
+    ///    2..8 explicitly so they never ride this default. Event clauses are roll-scoped.
+    /// <see cref="CreateSettings"/> does this before building; the standalone Jamlyzer does it
+    /// before scoring, so both report the same score for the same JAML and seed. Idempotent.
+    /// </summary>
+    internal static void NormalizeAntes(JamlConfig config)
     {
-        // A JAML with no must/should/mustNot clauses is a valid, real search: deck/stake/seeds
-        // and nothing else, with the host's own predicate free to drive the whole decision.
-
-        // 1) Parent and:/or: antes pass through nested arms that did not override (re-hoist so
-        //    programmatic clause trees match loader shape).
-        // 2) Still-empty antes → default 1..8 (sourceless == "anywhere"). Neg Tag authors
-        //    2..8 explicitly so they never ride this default. Event clauses are roll-scoped.
         foreach (var clause in config.Must.Concat(config.Should).Concat(config.MustNot))
             RehoistLogicAntes(clause);
         foreach (var clause in config.Must.Concat(config.Should).Concat(config.MustNot))
             FillDefaultAntes(clause);
+    }
+
+    public static IMotelySearchSettings CreateSettings(JamlConfig config, int engineCutoff = 0)
+    {
+        // A JAML with no must/should/mustNot clauses is a valid, real search: deck/stake/seeds
+        // and nothing else, with the host's own predicate free to drive the whole decision.
+        NormalizeAntes(config);
 
         IMotelySearchSettings settings =
             config.Filter is { Length: > 0 } filterName

@@ -1,5 +1,6 @@
 using Bootsharp;
 using Motely;
+using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
@@ -8,8 +9,11 @@ using Motely.SeedProviders;
 /// <summary>
 /// Search host. <c>Search.settings(jaml)</c> hands JS the engine's fluent settings as an interop
 /// instance; chain <c>with*</c> calls, then <c>start(cancellationToken)</c>. Finds arrive on
-/// <see cref="OnScored"/>, progress on <see cref="OnProgress"/>. Cancel through the token.
-/// Jimmolate is the live context.
+/// <see cref="OnScored"/>, progress on <see cref="OnProgress"/>. Opt in with
+/// <c>withAnalysis(eventRolls)</c> and each find's full Jamlyzer breakdown follows it on
+/// <see cref="OnAnalyzed"/>, walked by the engine in the same pass — the seed analyzes itself on the
+/// way out, so there is no second call into <c>Analyze</c> for a seed the search just handed over.
+/// Cancel through the token. Jimmolate is the live context.
 /// </summary>
 public static partial class Search
 {
@@ -18,6 +22,15 @@ public static partial class Search
 
     [Export]
     public static event Action<MotelySeedScore>? OnScored;
+
+    /// <summary>
+    /// A find's Jamlyzer breakdown, right after that seed's <see cref="OnScored"/>. Only fires when
+    /// the settings opted in with <see cref="SearchSettings.WithAnalysis"/>. Carries the same Score
+    /// and Tally the scored event did, plus every ante's boss, voucher, tags, shop, packs and, at
+    /// <c>eventRolls</c> &gt; 0, the raw roll queues.
+    /// </summary>
+    [Export]
+    public static event Action<MotelyJamlyzerSeedResult>? OnAnalyzed;
 
     /// <summary>
     /// JS predicate. Gets the live <see cref="MotelySingleSearchContext"/> (specialization rail),
@@ -29,17 +42,27 @@ public static partial class Search
 
     /// <summary>The engine's settings for this JAML, fluent. Default seed input is the sequential space.</summary>
     [Export]
-    public static SearchSettings Settings(string jaml) =>
-        new(JamlSearchBuilder.CreateSettings(JamlConfigLoader.FromJaml(jaml)));
+    public static SearchSettings Settings(string jaml)
+    {
+        var config = JamlConfigLoader.FromJaml(jaml);
+        // The ante window withAnalysis walks — read before CreateSettings fills unscoped clauses
+        // with 1..8 in place, so it is the same window Analyze.seeds(jaml) walks for this JAML.
+        int[] analyzeAntes = MotelyJamlyzer.ComputeAntes(config);
+        return new(JamlSearchBuilder.CreateSettings(config), analyzeAntes);
+    }
 
     /// <summary>Passthrough filter + <see cref="Jimmolate"/> as the only predicate.</summary>
     [Export]
     public static SearchSettings JimmolateSettings() =>
-        new(new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(new PassthroughFilterDesc())
-            .WithJimmolate(static ctx => Jimmolate(ctx)));
+        new(
+            new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(new PassthroughFilterDesc())
+                .WithJimmolate(static ctx => Jimmolate(ctx)),
+            MotelyJamlyzer.AllAntes
+        );
 
     internal static void Progress(MotelyProgress p) => OnProgress?.Invoke(p);
     internal static void Scored(MotelySeedScore s) => OnScored?.Invoke(s);
+    internal static void Analyzed(MotelyJamlyzerSeedResult r) => OnAnalyzed?.Invoke(r);
 }
 
 /// <summary>
@@ -49,10 +72,12 @@ public static partial class Search
 public sealed class SearchSettings
 {
     private readonly IMotelySearchSettings _settings;
+    private readonly int[] _analyzeAntes;
     private IMotelySearch? _search;
 
-    internal SearchSettings(IMotelySearchSettings settings)
+    internal SearchSettings(IMotelySearchSettings settings, int[] analyzeAntes)
     {
+        _analyzeAntes = analyzeAntes;
         // Browser WASM is single-threaded. Not a JS choice.
         _settings = settings
             .WithThreadCount(1)
@@ -61,6 +86,21 @@ public sealed class SearchSettings
             .WithScoredResultCallback(static t =>
                 Search.Scored(new MotelySeedScore(t.Seed, t.Score, t.TallyValuesSpan.ToArray())))
             .WithSeedMatchCallback(static s => Search.Scored(new MotelySeedScore(s, 1, [])));
+    }
+
+    /// <summary>
+    /// Have the engine run the Jamlyzer on every find as it is found: each seed reported on
+    /// <see cref="Search.OnScored"/> is followed by its full breakdown on <see cref="Search.OnAnalyzed"/>,
+    /// walked on the same context in the same pass. <paramref name="eventRolls"/> is the roll-queue
+    /// depth per stream (20 is what <c>Analyze.seeds</c> uses); 0 keeps just the per-ante summary —
+    /// boss, voucher, tags, shop, packs — the cheap shape for a results table.
+    /// </summary>
+    public SearchSettings WithAnalysis(int eventRolls)
+    {
+        _settings.WithSeedAnalyzeProvider(
+            new MotelyJamlyzerRiderDesc(_analyzeAntes, Search.Analyzed, eventRolls)
+        );
+        return this;
     }
 
     public SearchSettings WithBatchCharacterCount(int batchCharacterCount) { _settings.WithBatchCharacterCount(batchCharacterCount); return this; }

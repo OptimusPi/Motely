@@ -1,6 +1,6 @@
 {
     "name": "motely-wasm",
-    "version": "25.1.0",
+    "version": "26.0.0",
     "type": "module",
     "files": [
         "bin/motely-wasm"

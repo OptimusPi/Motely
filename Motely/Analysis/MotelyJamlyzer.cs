@@ -2,13 +2,20 @@ using Motely.Filters.Jaml;
 
 namespace Motely.Analysis;
 
+/// <summary>
+/// One seed's Jamlyzer breakdown. <c>Score</c> and <c>Tally</c> are what the JAML's scoring said
+/// about the seed — the same numbers the search's scored row carries (Tally is the per-should-clause
+/// raw hit counts, in authored order). Tally is null when nothing scored the seed: a config with no
+/// must/should clauses, or a search that has no score provider.
+/// </summary>
 public sealed record MotelyJamlyzerSeedResult(
     string Seed,
     int Score,
     IReadOnlyList<MotelyJamlyzerAnteResult> Antes,
     MotelyJamlyzerEvents Events,
     MotelyJamlyzerStreamStates StreamStates,
-    MotelyItem[]? ErraticDeck = null
+    MotelyItem[]? ErraticDeck = null,
+    int[]? Tally = null
 );
 
 public sealed record MotelyJamlyzerAnteResult(
@@ -160,13 +167,42 @@ public static class MotelyJamlyzer
         int eventRolls = 20
     ) => AnalyzeCore(config, resumeFrom, eventRolls);
 
+    /// <summary>Every ante the Jamlyzer can walk: the pre-run shop (0) and antes 1..8.</summary>
+    public static int[] AllAntes => [0, 1, 2, 3, 4, 5, 6, 7, 8];
+
+    /// <summary>
+    /// The Jamlyzer as a rider on a search. Attach the returned desc with
+    /// <see cref="IMotelySearchSettings.WithSeedAnalyzeProvider"/> and every seed the search reports
+    /// arrives at <paramref name="onAnalyzed"/> as a full <see cref="MotelyJamlyzerSeedResult"/>,
+    /// walked on the same context that just filtered and scored it and carrying the search's own
+    /// Score and Tally. One pass — a host on the far side of a boundary gets the find and what it
+    /// contains together, with no second call to <see cref="Analyze(JamlConfig, int)"/>.
+    /// <para>
+    /// Build it from the config as loaded, before
+    /// <see cref="Motely.Filters.JamlSearchBuilder.CreateSettings"/> (see <see cref="ComputeAntes"/>).
+    /// <paramref name="eventRolls"/> 0 gives the per-ante summary alone — boss, voucher, tags, shop,
+    /// packs — with every roll queue empty, the cheap shape for a results table. The callback fires
+    /// on the search's worker thread(s).
+    /// </para>
+    /// </summary>
+    public static MotelyJamlyzerRiderDesc CreateRiderDesc(
+        JamlConfig config,
+        Action<MotelyJamlyzerSeedResult> onAnalyzed,
+        int eventRolls = 20
+    ) => new(ComputeAntes(config), onAnalyzed, eventRolls);
+
     private static IReadOnlyList<MotelyJamlyzerSeedResult> AnalyzeCore(
         JamlConfig config,
         IReadOnlyDictionary<string, MotelyJamlyzerStreamStates>? resumeStates,
         int eventRolls
     )
     {
+        // Walk window first, off the raw scope (an unscoped clause means "walk 0..8, pre-run shop
+        // included"). Then normalize the clauses the way the search builder does before scoring,
+        // so an unscoped `should:` counts across 1..8 here exactly as it does in a search — without
+        // this, its antes are empty and the standalone Jamlyzer scores the seed 0.
         var antesToAnalyze = ComputeAntes(config);
+        Motely.Filters.JamlSearchBuilder.NormalizeAntes(config);
         bool hasScore = config.Must.Count + config.Should.Count > 0;
         var results = new List<MotelyJamlyzerSeedResult>(config.Seeds.Count);
 
@@ -185,6 +221,7 @@ public static class MotelyJamlyzer
                 .WithThreadCount(1);
 
             int score = 0;
+            int[]? tally = null;
             if (hasScore)
             {
                 settings = settings
@@ -195,29 +232,32 @@ public static class MotelyJamlyzer
                             minimumTotalScore: 0
                         )
                     )
-                    .WithScoredResultCallback(tally => score = tally.Score);
+                    .WithScoredResultCallback(row =>
+                    {
+                        score = row.Score;
+                        tally = row.Tallies;
+                    });
             }
 
             using var search = settings.CreateSearch();
             search.Start();
             search.AwaitCompletion();
 
-            results.Add(
-                new(
-                    seed,
-                    score,
-                    filterDesc.Antes,
-                    filterDesc.Events!,
-                    filterDesc.StreamStates!,
-                    filterDesc.ErraticDeck
-                )
-            );
+            // A seed the engine never handed to the filter (invalid) has no breakdown, so no row.
+            if (filterDesc.Result is { } result)
+                results.Add(result with { Score = score, Tally = tally });
         }
 
         return results;
     }
 
-    internal static int[] ComputeAntes(JamlConfig config)
+    /// <summary>
+    /// The antes the JAML's clauses scope to (sorted, deduplicated), or <see cref="AllAntes"/> when
+    /// no clause names one. Read it from the config as loaded:
+    /// <see cref="Motely.Filters.JamlSearchBuilder.CreateSettings"/> fills unscoped clauses with
+    /// 1..8 in place, which would hide the pre-run shop (ante 0) from a call made afterwards.
+    /// </summary>
+    public static int[] ComputeAntes(JamlConfig config)
     {
         var set = new SortedSet<int>();
         foreach (
@@ -228,6 +268,6 @@ public static class MotelyJamlyzer
         )
         foreach (var ante in clause.Antes)
             set.Add(ante);
-        return set.Count > 0 ? [.. set] : [0, 1, 2, 3, 4, 5, 6, 7, 8];
+        return set.Count > 0 ? [.. set] : AllAntes;
     }
 }

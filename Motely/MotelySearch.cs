@@ -91,9 +91,17 @@ public interface IMotelySeedAnalyzeDesc<TAnalyzeProvider> : IMotelySeedAnalyzeDe
 
 public interface IMotelySeedAnalyzeProvider
 {
-    // Analyze the seeds in baseFilterMask, firing the provider's own per-seed callback. No return
-    // mask: analysis never gates the search — it observes the survivors and emits their breakdowns.
-    void Analyze(ref MotelyVectorSearchContext searchContext, VectorMask baseFilterMask);
+    // Analyze the seeds in reportedMask — exactly the lanes the search just reported through its
+    // scored / seed-match callbacks (the auto score cutoff's clamp already applied), firing the
+    // provider's own per-seed callback. scores is the lane-indexed scored-row buffer for those
+    // lanes (read it; the search owns it), or null when the search has no score provider. No
+    // return mask: analysis never gates the search — it observes the finds and emits their
+    // breakdowns.
+    void Analyze(
+        ref MotelyVectorSearchContext searchContext,
+        VectorMask reportedMask,
+        MotelyScoredSeedResult[]? scores
+    );
 }
 
 public interface IMotelySeedRouter
@@ -1708,10 +1716,13 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 );
 
                 // Report the scored results!
-                ReportScoredResults(scoredMask, in searchParams);
+                VectorMask reportedMask = ReportScoredResults(scoredMask, in searchParams);
 
-                // After scoring, on the survivors, same context. Observes; never gates.
-                Search._analyzeProvider?.Analyze(ref searchContext, scoredMask);
+                // After scoring, on exactly the seeds just reported (not the raw scored mask: the
+                // auto cutoff clamp may have dropped some), same context, with their score rows.
+                // Observes; never gates.
+                if (reportedMask.IsPartiallyTrue())
+                    Search._analyzeProvider?.Analyze(ref searchContext, reportedMask, _resultBuffer);
             }
             else if (Search._seedRouter != null)
             {
@@ -1739,13 +1750,20 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                         in Search._searchParameters,
                         in searchParams
                     );
-                    Search._analyzeProvider.Analyze(ref searchContext, searchResultMask);
+                    // No scoring happened, so there are no score rows to hand along.
+                    Search._analyzeProvider.Analyze(ref searchContext, searchResultMask, null);
                 }
             }
         }
 
+        /// <summary>
+        /// Reports the scored lanes through the scored-result callback and returns the mask of
+        /// lanes actually reported — <paramref name="resultMask"/> minus invalid lanes and minus
+        /// whatever the auto score cutoff clamp dropped. That mask is what the analyze provider
+        /// runs on, so a find's breakdown is emitted exactly when the find itself is.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ReportScoredResults(
+        private VectorMask ReportScoredResults(
             VectorMask resultMask,
             in MotelySearchContextParams searchParams
         )
@@ -1757,6 +1775,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             //   1. scoreProvider.Score() -> invokes callback -> Console.WriteLine (FIRST OUTPUT)
             //   2. ReportScoredResults() -> ONLY increment counter (NO OUTPUT)
 
+            uint reported = 0;
             for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)
             {
                 if (resultMask[lane] && searchParams.IsLaneValid(lane))
@@ -1788,9 +1807,11 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                         new MotelySeedScore(row.Seed, row.Score, row.TallyValuesSpan.ToArray())
                     );
                     _localMatchingSeeds++;
+                    reported |= 1u << lane;
                     Search.NoteMatchForStop();
                 }
             }
+            return new VectorMask(reported);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
