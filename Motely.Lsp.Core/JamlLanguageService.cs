@@ -424,6 +424,117 @@ public static class JamlLanguageService
         return data;
     }
 
+    // ── Document symbols ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The outline: Ctrl+Shift+O, breadcrumbs, and the Outline view. Nesting comes from
+    /// indentation, read with the same comment rule, <c>"- "</c> handling, and key extraction
+    /// <see cref="SemanticTokens"/> uses, so the tree can never disagree with the colours about
+    /// where a key starts or what kind it is.
+    ///
+    /// List items are the case worth stating: <c>- joker:</c> entries at one column are siblings
+    /// of each other, and the plain keys that follow at that same column (<c>antes:</c>,
+    /// <c>score:</c>) are the item's children, not its siblings — YAML block-sequence shape.
+    /// </summary>
+    /// <summary>A node under construction: children accumulate until something at its level or
+    /// shallower arrives, which is also when its end line becomes known.</summary>
+    private sealed record SymbolFrame(
+        int Indent,
+        bool IsDash,
+        string Name,
+        int Kind,
+        JamlSpan Selection,
+        List<JamlDocumentSymbol> Children
+    );
+
+    public static IReadOnlyList<JamlDocumentSymbol> DocumentSymbols(string text)
+    {
+        var roots = new List<JamlDocumentSymbol>();
+        if (string.IsNullOrEmpty(text))
+            return roots;
+
+        var lines = SplitLines(text);
+        var stack = new List<SymbolFrame>();
+
+        // Close every frame the incoming line is not inside, ending each block on `endLine`.
+        void Close(int downToCount, int endLine)
+        {
+            while (stack.Count > downToCount)
+            {
+                var f = stack[^1];
+                stack.RemoveAt(stack.Count - 1);
+                var endColumn = endLine >= 0 && endLine < lines.Length ? lines[endLine].Length : 0;
+                var node = new JamlDocumentSymbol(
+                    f.Name,
+                    f.Kind,
+                    new JamlSpan(f.Selection.StartLine, f.Indent, Math.Max(endLine, f.Selection.StartLine), endColumn),
+                    f.Selection,
+                    f.Children
+                );
+                if (stack.Count > 0)
+                    stack[^1].Children.Add(node);
+                else
+                    roots.Add(node);
+            }
+        }
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var raw = lines[i];
+
+            // Same comment rule as SemanticTokens / JamlDocumentParser.StripComment.
+            var content = raw;
+            for (var j = 0; j < raw.Length; j++)
+                if (raw[j] == '#' && (j == 0 || char.IsWhiteSpace(raw[j - 1])))
+                {
+                    content = raw[..j];
+                    break;
+                }
+
+            var body = content.TrimStart();
+            if (body.Length == 0)
+                continue;
+
+            var indent = content.Length - body.Length;
+            var isDash = body.StartsWith("- ", StringComparison.Ordinal);
+            if (isDash)
+            {
+                indent += 2;
+                body = body[2..];
+            }
+
+            var colon = body.IndexOf(':');
+            if (colon <= 0)
+                continue;
+
+            var key = body[..colon].Trim();
+            if (key.Length == 0)
+                continue;
+            var keyStart = indent + body.IndexOf(key, StringComparison.Ordinal);
+
+            // Pop frames this line is not inside. At equal indent a dash always starts a new
+            // sibling; a plain key only stays nested when the frame it meets is a dash item.
+            var keep = stack.Count;
+            while (
+                keep > 0
+                && (stack[keep - 1].Indent > indent
+                    || (stack[keep - 1].Indent == indent && (isDash || !stack[keep - 1].IsDash)))
+            )
+                keep--;
+            Close(keep, i - 1);
+
+            var kind = IsDiscriminator(key) ? 5 // Class
+                : JamlConfig.RootKeys.Any(k => k.Equals(key, StringComparison.OrdinalIgnoreCase))
+                    ? 3 // Namespace
+                    : 7; // Property
+
+            stack.Add(new SymbolFrame(indent, isDash, key, kind, JamlSpan.OnLine(i, keyStart, key.Length), []));
+        }
+
+        Close(0, lines.Length - 1);
+        return roots;
+    }
+
     private static bool IsEnumValue(string word)
     {
         foreach (var (enumType, _) in JamlSchema.ValueEnumKinds)
@@ -569,7 +680,15 @@ public static class JamlLanguageService
 
             var colon = body.IndexOf(':');
             if (colon <= 0)
+            {
+                // A one-line clause carries its discriminator in prose instead of a `key:` —
+                // "- Perkeo in ante 1" is a joker clause though the word "joker" never appears.
+                // Without this, keys indented under a line clause saw no enclosing clause and
+                // completed to nothing.
+                if (fromListItem && discriminator is null && blockKey is null)
+                    discriminator = DiscriminatorForLine(body);
                 continue;
+            }
             var key = body[..colon].Trim();
 
             if (discriminator is null && IsDiscriminator(key))
@@ -592,6 +711,22 @@ public static class JamlLanguageService
     {
         var indent = CountIndent(line);
         return line.TrimStart().StartsWith('-') ? indent + 2 : indent;
+    }
+
+    /// <summary>
+    /// The discriminator a one-line clause stands for. Asks the engine's own line reader
+    /// (<see cref="JamlLine.TryToClause"/>) rather than pattern-matching the prose here, so the
+    /// completion list can never disagree with what the loader will actually build. Answers only
+    /// with a discriminator <see cref="JamlSchema"/> knows, so a rename on either side degrades
+    /// to "no completion" instead of to a confidently wrong key list.
+    /// </summary>
+    private static string? DiscriminatorForLine(string lineBody)
+    {
+        if (lineBody.Length == 0)
+            return null;
+        if (!JamlLine.TryToClause(lineBody, out var clause, out _) || clause is null)
+            return null;
+        return JamlLine.DiscriminatorOf(clause);
     }
 
     private static bool IsDiscriminator(string word) =>

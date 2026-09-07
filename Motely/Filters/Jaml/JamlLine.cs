@@ -46,6 +46,41 @@ public static class JamlLine
             _ => null,
         };
 
+    /// <summary>
+    /// The block-form discriminator a one-line clause is equivalent to — "Perkeo in ante 1" is a
+    /// <c>joker</c> clause though the word never appears. Sits next to <see cref="FromClause"/>
+    /// because it is the same knowledge (clause type → its spelling) and drifts if it lives
+    /// anywhere else. A switch rather than a name convention over <c>GetType().Name</c>: renaming
+    /// a clause type then breaks the build here instead of silently changing what completes, and
+    /// the spelling stops depending on the type identifier at all.
+    /// </summary>
+    public static string? DiscriminatorOf(IJamlClause clause) =>
+        clause switch
+        {
+            JokerClause => "joker",
+            TarotCardClause => "tarotCard",
+            SpectralCardClause => "spectralCard",
+            PlanetCardClause => "planetCard",
+            StandardCardClause => "standardCard",
+            VoucherClause => "voucher",
+            TagClause => "tag",
+            BossClause => "boss",
+            StartingDrawClause => "startingDraw",
+            LuckyMoneyClause => "luckyMoney",
+            LuckyMultClause => "luckyMult",
+            MisprintMultClause => "misprintMult",
+            WheelOfFortuneClause => "wheelOfFortune",
+            GrosMichelExtinctClause => "grosMichelExtinct",
+            CavendishExtinctClause => "cavendishExtinct",
+            SpaceLevelupClause => "spaceLevelup",
+            GlassDestroyClause => "glassDestroy",
+            WheelStaysFlippedClause => "wheelStaysFlipped",
+            BusinessPayoutClause => "businessPayout",
+            BloodstoneTriggerClause => "bloodstoneTrigger",
+            ParkingPayoutClause => "parkingPayout",
+            _ => null,
+        };
+
     private static string? FromConsumable<T>(T[] values, int[] antes)
         where T : struct, Enum
     {

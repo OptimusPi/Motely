@@ -27,13 +27,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     () => undefined,
   );
 
-  try {
-    await startLanguageServer(context);
-  } catch (err) {
-    // Chat + tools still work if long-running LSP path is missing.
+  // Not awaited: in the workspace-fallback path this is a `dotnet run`, so awaiting it holds
+  // activation open for a full restore + build. Chat and tools do not depend on the server.
+  void startLanguageServer(context).catch((err) => {
     const msg = err instanceof Error ? err.message : String(err);
     vscode.window.showWarningMessage(`JAML LSP: ${msg}`);
-  }
+  });
 }
 
 async function startLanguageServer(context: vscode.ExtensionContext): Promise<void> {

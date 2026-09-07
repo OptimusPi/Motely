@@ -119,18 +119,24 @@ public static class Program
         }
 
         var results = MotelyJamlyzer.Analyze(config, eventRolls);
-        var report = JsonRenderDocument.Build(config, results, eventRolls);
 
-        if (jsonPath is not null)
+        // --jamlui serializes `results` directly, so a jaml-ui-only run has no use for the
+        // report graph — don't project every ante of every seed just to drop it.
+        if (jsonPath is not null || htmlPath is not null)
         {
-            JsonRenderDocument.WriteJson(report, jsonPath);
-            Console.WriteLine($"Wrote JSON → {jsonPath}");
-        }
-        if (htmlPath is not null)
-        {
-            JsonRenderDocument.EnsureParentDir(htmlPath);
-            File.WriteAllText(htmlPath, HtmlReportRenderer.Render(report));
-            Console.WriteLine($"Wrote HTML → {htmlPath}");
+            var report = JsonRenderDocument.Build(config, results, eventRolls);
+
+            if (jsonPath is not null)
+            {
+                JsonRenderDocument.WriteJson(report, jsonPath);
+                Console.WriteLine($"Wrote JSON → {jsonPath}");
+            }
+            if (htmlPath is not null)
+            {
+                JsonRenderDocument.EnsureParentDir(htmlPath);
+                File.WriteAllText(htmlPath, HtmlReportRenderer.Render(report));
+                Console.WriteLine($"Wrote HTML → {htmlPath}");
+            }
         }
         if (jamlUiPath is not null)
         {

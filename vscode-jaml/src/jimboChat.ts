@@ -10,6 +10,7 @@
 import * as vscode from "vscode";
 import {
   diagnoseJaml,
+  escapePipes,
   explainTopic,
   formatDiagnoseMarkdown,
   formatSearchMarkdown,
@@ -416,6 +417,3 @@ function historyAsMessages(context: vscode.ChatContext): vscode.LanguageModelCha
   return out.slice(-8);
 }
 
-function escapePipes(s: string): string {
-  return s.replace(/\|/g, "\\|").replace(/\n/g, " ");
-}

@@ -8,13 +8,7 @@
  */
 import * as fs from "node:fs";
 import * as vscode from "vscode";
-import {
-  diagnoseJaml,
-  explainTopic,
-  formatDiagnoseMarkdown,
-  formatSearchMarkdown,
-  searchSeeds,
-} from "./motelyEngine";
+import { explainTopic, formatSearchMarkdown, searchSeeds } from "./motelyEngine";
 import { validateWithWasm } from "./motelyWasm";
 
 interface ValidateParams {
@@ -34,14 +28,13 @@ interface ExplainParams {
 
 export function registerMotelyTools(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.lm.registerTool("motely_validate_jaml", new ValidateJamlTool(context)),
+    vscode.lm.registerTool("motely_validate_jaml", new ValidateJamlTool()),
     vscode.lm.registerTool("motely_search_seeds", new SearchSeedsTool(context)),
     vscode.lm.registerTool("motely_explain_jaml", new ExplainJamlTool(context)),
   );
 }
 
 class ValidateJamlTool implements vscode.LanguageModelTool<ValidateParams> {
-  constructor(private readonly context: vscode.ExtensionContext) {}
 
   async prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<ValidateParams>,
@@ -55,7 +48,7 @@ class ValidateJamlTool implements vscode.LanguageModelTool<ValidateParams> {
       confirmationMessages: {
         title: "Validate JAML",
         message: new vscode.MarkdownString(
-          `Run Motely engine validate on **${where}**? (local process, no network.)`,
+          `Run Motely engine validate on **${where}**? (in-process WASM, no network.)`,
         ),
       },
     };
@@ -80,7 +73,7 @@ class ValidateJamlTool implements vscode.LanguageModelTool<ValidateParams> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       throw new Error(
-        `motely_validate_jaml failed: ${msg}. Ensure Motely.Lsp is available. Retry with absolute filePath or full jamlText.`,
+        `motely_validate_jaml failed: ${msg}. Ensure the Motely WASM module loaded. Retry with absolute filePath or full jamlText.`,
       );
     }
   }

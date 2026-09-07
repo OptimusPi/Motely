@@ -168,7 +168,7 @@ public static class MotelyJamlyzer
     ) => AnalyzeCore(config, resumeFrom, eventRolls);
 
     /// <summary>Every ante the Jamlyzer can walk: the pre-run shop (0) and antes 1..8.</summary>
-    public static int[] AllAntes => [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    public static readonly int[] AllAntes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
     /// <summary>
     /// The Jamlyzer as a rider on a search. Attach the returned desc with

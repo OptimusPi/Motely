@@ -345,24 +345,23 @@ class Program
                 // ── LOCAL SEED LAKE ──────────────────────────────────────
                 // Every find streams into the shared lake under the pool's filter id as it is
                 // found, so it is on disk whether or not the submit below ever succeeds.
-                using var lake = localDbDir is null ? null : new SeedLakeSink(localDbDir, claim.FilterId);
+                using var lake = localDbDir is null ? null
+                    : new SeedLakeSink(localDbDir, claim.FilterId, plan.ScoreTallyColumnCount > 0 ? plan.TallyLabels : null);
 
-                settings.WithSeedMatchCallback(line =>
-                {
-                    int comma = line.IndexOf(',');
-                    if (comma < 0)
+                // Take the score off the typed tally rather than re-parsing it back out of the
+                // formatted "seed,score,..." line — the text form drops the tally columns.
+                if (plan.ScoreTallyColumnCount > 0)
+                    settings = settings.WithScoredResultCallback(tally =>
                     {
-                        matchResults.Add(new SeedResultDto { Seed = line });
-                        lake?.Write(line, null);
-                        return;
-                    }
-                    string seed = line[..comma];
-                    int comma2 = line.IndexOf(',', comma + 1);
-                    var scoreSpan = comma2 >= 0 ? line.AsSpan(comma + 1, comma2 - comma - 1) : line.AsSpan(comma + 1);
-                    int? score = int.TryParse(scoreSpan, out int s) ? s : null;
-                    matchResults.Add(new SeedResultDto { Seed = seed, Score = score ?? 0 });
-                    lake?.Write(seed, score);
-                });
+                        lake?.OnScored(in tally);
+                        matchResults.Add(new SeedResultDto { Seed = tally.Seed, Score = tally.Score });
+                    });
+                else
+                    settings = settings.WithSeedMatchCallback(seed =>
+                    {
+                        lake?.OnSeed(seed);
+                        matchResults.Add(new SeedResultDto { Seed = seed });
+                    });
 
                 try
                 {

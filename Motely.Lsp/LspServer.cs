@@ -118,6 +118,9 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
             case "textDocument/semanticTokens/full":
                 Respond(id, SemanticTokensResult(@params));
                 break;
+            case "textDocument/documentSymbol":
+                Respond(id, DocumentSymbolResult(@params));
+                break;
             default:
                 if (id is not null)
                     RespondError(id, -32601, $"Method not found: {method}");
@@ -132,6 +135,7 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
             // 1 = Full sync: JAML documents are small; whole-text sync keeps truth simple.
             ["textDocumentSync"] = 1,
             ["hoverProvider"] = true,
+            ["documentSymbolProvider"] = true,
             ["completionProvider"] = new JsonObject
             {
                 ["triggerCharacters"] = new JsonArray(":", " ", "-"),
@@ -177,6 +181,35 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
             ["data"] = new JsonArray([.. data.Select(v => (JsonNode)v)]),
         };
     }
+
+    /// <summary>
+    /// <c>textDocument/documentSymbol</c>. Same tolerance as semantic tokens: an unknown document
+    /// answers with an empty array rather than an error, because the client asks before
+    /// <c>didOpen</c> settles often enough that erroring would only redden the Output panel.
+    /// </summary>
+    private JsonNode DocumentSymbolResult(JsonNode? @params)
+    {
+        var uri = @params?["textDocument"]?["uri"]?.GetValue<string>();
+        var text = uri is not null && _documents.TryGetValue(uri, out var t) ? t : "";
+        return new JsonArray(
+            [.. JamlLanguageService.DocumentSymbols(text).Select(SymbolNode)]
+        );
+    }
+
+    private static JsonNode SymbolNode(JamlDocumentSymbol s) => new JsonObject
+    {
+        ["name"] = s.Name,
+        ["kind"] = s.Kind,
+        ["range"] = SpanRange(s.Range),
+        ["selectionRange"] = SpanRange(s.SelectionRange),
+        ["children"] = new JsonArray([.. s.Children.Select(SymbolNode)]),
+    };
+
+    private static JsonObject SpanRange(JamlSpan span) => new()
+    {
+        ["start"] = new JsonObject { ["line"] = span.StartLine, ["character"] = span.StartColumn },
+        ["end"] = new JsonObject { ["line"] = span.EndLine, ["character"] = span.EndColumn },
+    };
 
     private JsonNode? HoverResult(JsonNode? @params)
     {

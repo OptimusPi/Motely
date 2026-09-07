@@ -200,6 +200,12 @@ internal static class MotelyJamlyzerSeedWalk
         int offset
     )
     {
+        // Nothing to walk and nothing to replay: building the streams would hash a dozen
+        // PRNG keys per ante to then read none of them. `eventRolls: 0` is sold as the
+        // cheap shape, so make it cheap.
+        if (n == 0 && offset == 0)
+            return new([], [], [], [], [], [], [], [], [], [], []);
+
         // Joker streams
         var judgementStream = ctx.CreateJudgementJokerStream(ante);
         var wraithStream = ctx.CreateWraithJokerStream(ante);
@@ -290,6 +296,11 @@ internal static class MotelyJamlyzerSeedWalk
         int offset
     )
     {
+        // Same short-circuit as CollectPulls: no rolls and nothing to replay means the
+        // seven streams below would be built only to be thrown away.
+        if (n == 0 && offset == 0)
+            return new([], [], [], [], [], [], []);
+
         // Shop-source streams share the keys the shop item queue consumes, but each raw
         // queue is read on its own copy of stream state — collecting them here does not
         // perturb the resolved shop above. None depend on voucher run-state.

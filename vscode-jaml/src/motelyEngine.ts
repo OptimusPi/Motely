@@ -33,41 +33,68 @@ export interface DiagnoseResult {
 }
 
 /**
- * 1. `jaml.serverPath`
- * 2. Bundled `server/Motely.Lsp`
- * 3. Workspace `dotnet run --project Motely.Lsp`
+ * One resolution order for every Motely binary the extension shells out to:
+ * 1. the configured `jaml.<settingKey>`
+ * 2. a bundled build under `server/`
+ * 3. the workspace project via `dotnet run --project`
  */
-export function resolveMotelyLsp(context: vscode.ExtensionContext): MotelyProcess {
-  const configured = vscode.workspace.getConfiguration("jaml").get<string>("serverPath")?.trim();
+function resolveMotelyBinary(
+  context: vscode.ExtensionContext,
+  spec: {
+    settingKey: string;
+    exeName: string;
+    projectDir: string;
+    bundledDisplay: string;
+    runArgs: string[];
+    notFoundHint: string;
+  },
+): MotelyProcess {
+  const configured = vscode.workspace
+    .getConfiguration("jaml")
+    .get<string>(spec.settingKey)
+    ?.trim();
   if (configured) {
     if (!fs.existsSync(configured)) {
-      throw new Error(`jaml.serverPath does not exist: ${configured}`);
+      throw new Error(`jaml.${spec.settingKey} does not exist: ${configured}`);
     }
     return { command: configured, args: [], display: configured };
   }
 
-  const bundledName = process.platform === "win32" ? "Motely.Lsp.exe" : "Motely.Lsp";
+  const bundledName = process.platform === "win32" ? `${spec.exeName}.exe` : spec.exeName;
   const bundled = path.join(context.extensionPath, "server", bundledName);
   if (fs.existsSync(bundled)) {
-    return { command: bundled, args: [], display: "bundled" };
+    return { command: bundled, args: [], display: spec.bundledDisplay };
   }
 
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (folder) {
-    const csproj = path.join(folder, "Motely.Lsp", "Motely.Lsp.csproj");
+    const csproj = path.join(folder, spec.projectDir, `${spec.projectDir}.csproj`);
     if (fs.existsSync(csproj)) {
       return {
         command: "dotnet",
-        args: ["run", "--project", csproj, "--no-launch-profile", "--"],
-        display: "dotnet run Motely.Lsp",
+        args: ["run", "--project", csproj, ...spec.runArgs, "--no-launch-profile", "--"],
+        display: `dotnet run ${spec.projectDir}`,
       };
     }
   }
 
-  throw new Error(
-    "Motely.Lsp not found. Set jaml.serverPath, publish Motely.Lsp into vscode-jaml/server/, " +
+  throw new Error(spec.notFoundHint);
+}
+
+export function resolveMotelyLsp(context: vscode.ExtensionContext): MotelyProcess {
+  return resolveMotelyBinary(context, {
+    settingKey: "serverPath",
+    exeName: "Motely.Lsp",
+    projectDir: "Motely.Lsp",
+    bundledDisplay: "bundled",
+    // `-v q` is load-bearing, not tidiness: this process speaks LSP framing on stdout, and
+    // `dotnet run` prints its build output there first. At default verbosity the client's
+    // first bytes are "Determining projects to restore..." and the session never handshakes.
+    runArgs: ["-c", "Release", "-v", "q"],
+    notFoundHint:
+      "Motely.Lsp not found. Set jaml.serverPath, publish Motely.Lsp into vscode-jaml/server/, " +
       "or open the MotelyJAML workspace.",
-  );
+  });
 }
 
 /** Run engine diagnose on text or an absolute file path. */
@@ -141,42 +168,17 @@ export interface SearchResult {
   timedOut: boolean;
 }
 
-/**
- * 1. `jaml.cliPath`
- * 2. Bundled `server/Motely.CLI` next to the extension
- * 3. Workspace `dotnet run --project Motely.CLI`
- */
 export function resolveMotelyCli(context: vscode.ExtensionContext): MotelyProcess {
-  const configured = vscode.workspace.getConfiguration("jaml").get<string>("cliPath")?.trim();
-  if (configured) {
-    if (!fs.existsSync(configured)) {
-      throw new Error(`jaml.cliPath does not exist: ${configured}`);
-    }
-    return { command: configured, args: [], display: configured };
-  }
-
-  const bundledName = process.platform === "win32" ? "Motely.CLI.exe" : "Motely.CLI";
-  const bundled = path.join(context.extensionPath, "server", bundledName);
-  if (fs.existsSync(bundled)) {
-    return { command: bundled, args: [], display: "bundled CLI" };
-  }
-
-  const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  if (folder) {
-    const csproj = path.join(folder, "Motely.CLI", "Motely.CLI.csproj");
-    if (fs.existsSync(csproj)) {
-      return {
-        command: "dotnet",
-        args: ["run", "--project", csproj, "-c", "Release", "--no-launch-profile", "--"],
-        display: "dotnet run Motely.CLI",
-      };
-    }
-  }
-
-  throw new Error(
-    "Motely.CLI not found. Set jaml.cliPath, publish Motely.CLI into vscode-jaml/server/, " +
+  return resolveMotelyBinary(context, {
+    settingKey: "cliPath",
+    exeName: "Motely.CLI",
+    projectDir: "Motely.CLI",
+    bundledDisplay: "bundled CLI",
+    runArgs: ["-c", "Release"],
+    notFoundHint:
+      "Motely.CLI not found. Set jaml.cliPath, publish Motely.CLI into vscode-jaml/server/, " +
       "or open the MotelyJAML workspace.",
-  );
+  });
 }
 
 /**
@@ -402,6 +404,7 @@ export function formatDiagnoseMarkdown(result: DiagnoseResult, label: string): s
   ].join("\n");
 }
 
-function escapePipes(s: string): string {
+/** Make a value safe to drop into a markdown table cell. */
+export function escapePipes(s: string): string {
   return s.replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
