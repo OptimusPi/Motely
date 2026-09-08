@@ -186,7 +186,7 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "npx --yes @vscode/vsce package",
+    "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
