@@ -85,6 +85,7 @@ public sealed record MotelyJamlyzerPulls(
 /// </summary>
 public sealed record MotelyJamlyzerStreamStates(
     int RollOffset,
+    int ShopOffset,
     double LuckyMoney,
     double LuckyMult,
     double WheelOfFortune,
@@ -123,8 +124,9 @@ public static class MotelyJamlyzer
     /// <summary>Analyze each seed with every event stream starting at the seed's natural start (0).</summary>
     public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(
         JamlConfig config,
-        int eventRolls = 20
-    ) => AnalyzeCore(config, resumeStates: null, eventRolls);
+        int eventRolls = 20,
+        int shopSlots = 0
+    ) => AnalyzeCore(config, resumeStates: null, eventRolls, shopSlots);
 
     /// <summary>
     /// Analyze each seed, resuming every event stream from <paramref name="resumeFrom"/> — the state
@@ -133,7 +135,8 @@ public static class MotelyJamlyzer
     public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(
         JamlConfig config,
         MotelyJamlyzerStreamStates resumeFrom,
-        int eventRolls = 20
+        int eventRolls = 20,
+        int shopSlots = 0
     )
     {
         // The bag's 14 event-stream State doubles are positions in a *specific* seed's PRNG. Replaying
@@ -149,7 +152,8 @@ public static class MotelyJamlyzer
         return AnalyzeCore(
             config,
             new Dictionary<string, MotelyJamlyzerStreamStates> { [config.Seeds[0]] = resumeFrom },
-            eventRolls
+            eventRolls,
+            shopSlots
         );
     }
 
@@ -164,8 +168,9 @@ public static class MotelyJamlyzer
     public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(
         JamlConfig config,
         IReadOnlyDictionary<string, MotelyJamlyzerStreamStates> resumeFrom,
-        int eventRolls = 20
-    ) => AnalyzeCore(config, resumeFrom, eventRolls);
+        int eventRolls = 20,
+        int shopSlots = 0
+    ) => AnalyzeCore(config, resumeFrom, eventRolls, shopSlots);
 
     /// <summary>Every ante the Jamlyzer can walk: the pre-run shop (0) and antes 1..8.</summary>
     public static readonly int[] AllAntes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
@@ -188,13 +193,15 @@ public static class MotelyJamlyzer
     public static MotelyJamlyzerRiderDesc CreateRiderDesc(
         JamlConfig config,
         Action<MotelyJamlyzerSeedResult> onAnalyzed,
-        int eventRolls = 20
-    ) => new(ComputeAntes(config), onAnalyzed, eventRolls);
+        int eventRolls = 20,
+        int shopSlots = 0
+    ) => new(ComputeAntes(config), onAnalyzed, eventRolls, shopSlots);
 
     private static IReadOnlyList<MotelyJamlyzerSeedResult> AnalyzeCore(
         JamlConfig config,
         IReadOnlyDictionary<string, MotelyJamlyzerStreamStates>? resumeStates,
-        int eventRolls
+        int eventRolls,
+        int shopSlots = 0
     )
     {
         // Walk window first, off the raw scope (an unscoped clause means "walk 0..8, pre-run shop
@@ -211,7 +218,12 @@ public static class MotelyJamlyzer
             // Each seed resumes from its own bag; one absent from the map starts fresh (offset 0).
             MotelyJamlyzerStreamStates? seedResume =
                 resumeStates is not null && resumeStates.TryGetValue(seed, out var s) ? s : null;
-            var filterDesc = new MotelyJamlyzerFilterDesc(antesToAnalyze, eventRolls, seedResume);
+            var filterDesc = new MotelyJamlyzerFilterDesc(
+                antesToAnalyze,
+                eventRolls,
+                seedResume,
+                shopSlots
+            );
             var settings = new MotelySearchSettings<MotelyJamlyzerFilterDesc.JamlyzerFilter>(
                 filterDesc
             )

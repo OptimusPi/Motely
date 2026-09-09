@@ -342,9 +342,13 @@ public sealed class JAMLyzerUnitTests
     [Fact]
     public void Analyze_ShopItems_PagedAndResumed_ReconstructsContinuousStream()
     {
-        var full = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: 50)[0];
-        var a = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: 25)[0];
-        var b = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), a.StreamStates, eventRolls: 25)[0];
+        var full = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), shopSlots: 50)[0];
+        var a = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), shopSlots: 25)[0];
+        var b = MotelyJamlyzer.Analyze(
+            SeedConfig("UNITTEST"),
+            a.StreamStates,
+            shopSlots: 25
+        )[0];
 
         Assert.Equal(50, full.Antes[1].ShopItems.Count);
         Assert.Equal(25, a.Antes[1].ShopItems.Count);
@@ -353,6 +357,48 @@ public sealed class JAMLyzerUnitTests
         Assert.Equal<IEnumerable<MotelyItem>>(
             full.Antes[1].ShopItems,
             a.Antes[1].ShopItems.Concat(b.Antes[1].ShopItems)
+        );
+    }
+
+    /// <summary>
+    /// Shop depth is its own dial. It used to ride <c>eventRolls</c> behind a
+    /// <c>!= 20</c> guard, which made 20 a dead value -- asking for exactly 20 shop slots
+    /// silently returned the ante-1 default of 15 -- and made a deep shop allocate an equally
+    /// deep array for all eighteen pull and shop-source queues.
+    /// </summary>
+    [Fact]
+    public void Analyze_ShopSlots_IsIndependentOfEventRolls()
+    {
+        Assert.Equal(
+            20,
+            MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), shopSlots: 20)[0].Antes[1]
+                .ShopItems.Count
+        );
+
+        // eventRolls sizes the roll queues and leaves the shop on its default.
+        var rolls = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: 200)[0];
+        Assert.Equal(15, rolls.Antes[1].ShopItems.Count);
+        Assert.Equal(200, rolls.Antes[1].ShopStreams.ShopTarots.Count);
+
+        // ...and shopSlots sizes the shop and leaves the roll queues on theirs.
+        var shop = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), shopSlots: 200)[0];
+        Assert.Equal(200, shop.Antes[1].ShopItems.Count);
+        Assert.Equal(20, shop.Antes[1].ShopStreams.ShopTarots.Count);
+    }
+
+    /// <summary>A deep ante-1 shop is one call and the items keep coming: the stream never dries up.</summary>
+    [Fact]
+    public void Analyze_ShopSlots_WalksPastTheAnteOneDefault()
+    {
+        var deep = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), shopSlots: 500)[0];
+        Assert.Equal(500, deep.Antes[1].ShopItems.Count);
+
+        // The first 15 are still exactly what the default walk returns -- deepening the walk
+        // extends the queue, it does not shift it.
+        var shallow = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"))[0];
+        Assert.Equal<IEnumerable<MotelyItem>>(
+            shallow.Antes[1].ShopItems,
+            deep.Antes[1].ShopItems.Take(15)
         );
     }
 }
