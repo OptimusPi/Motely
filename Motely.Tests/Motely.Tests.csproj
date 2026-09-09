@@ -38,6 +38,13 @@
     <Compile Remove="JimmolateScoringOrderTests.cs" />
   </ItemGroup>
 
+  <!-- Motely.AppHost was removed in 7411172; AppHostModelTests.cs outlived it and still binds
+       Projects.Motely_AppHost plus the Aspire.Hosting.* namespaces, which nothing references any
+       more. It cannot compile until an AppHost comes back, so exclude rather than delete. -->
+  <ItemGroup>
+    <Compile Remove="AppHostModelTests.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Update="seeds/*.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

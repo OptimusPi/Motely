@@ -338,4 +338,21 @@ public sealed class JAMLyzerUnitTests
         var antes = MotelyJamlyzer.ComputeAntes(config);
         Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7, 8], antes);
     }
+
+    [Fact]
+    public void Analyze_ShopItems_PagedAndResumed_ReconstructsContinuousStream()
+    {
+        var full = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: 50)[0];
+        var a = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: 25)[0];
+        var b = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), a.StreamStates, eventRolls: 25)[0];
+
+        Assert.Equal(50, full.Antes[1].ShopItems.Count);
+        Assert.Equal(25, a.Antes[1].ShopItems.Count);
+        Assert.Equal(25, b.Antes[1].ShopItems.Count);
+
+        Assert.Equal<IEnumerable<MotelyItem>>(
+            full.Antes[1].ShopItems,
+            a.Antes[1].ShopItems.Concat(b.Antes[1].ShopItems)
+        );
+    }
 }

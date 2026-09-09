@@ -134,10 +134,17 @@ internal static class MotelyJamlyzerSeedWalk
 
             // Shop
             MotelySingleShopItemStream shopStream = ctx.CreateShopItemStream(ante);
-            int maxSlots = ante <= 1 ? 15 : 50;
+            int maxSlots =
+                window.EventRolls != 20 && window.EventRolls > 0
+                    ? window.EventRolls
+                    : (ante <= 1 ? 15 : 50);
             MotelyItem[] shopItems = new MotelyItem[maxSlots];
-            for (int i = 0; i < maxSlots; i++)
-                shopItems[i] = ctx.GetNextShopItem(ref shopStream);
+            for (int i = 0; i < offset + maxSlots; i++)
+            {
+                var item = ctx.GetNextShopItem(ref shopStream);
+                if (i >= offset)
+                    shopItems[i - offset] = item;
+            }
 
             // Packs
             var packStream = ctx.CreateBoosterPackStream(ante);

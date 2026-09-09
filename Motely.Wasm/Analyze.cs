@@ -17,4 +17,11 @@ public static partial class Analyze
     [Export]
     public static IReadOnlyList<MotelyJamlyzerSeedResult> SeedsPaged(string jaml, int eventRolls) =>
         MotelyJamlyzer.Analyze(JamlConfigLoader.FromJaml(jaml), eventRolls);
+
+    [Export]
+    public static IReadOnlyList<MotelyJamlyzerSeedResult> SeedsResume(
+        string jaml,
+        MotelyJamlyzerStreamStates resumeFrom,
+        int eventRolls
+    ) => MotelyJamlyzer.Analyze(JamlConfigLoader.FromJaml(jaml), resumeFrom, eventRolls);
 }
